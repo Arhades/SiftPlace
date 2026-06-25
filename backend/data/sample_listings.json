@@ -1,0 +1,80 @@
+[
+  {
+    "name": "Ari Garden Studio",
+    "area": "Ari",
+    "lat": 13.7797,
+    "lon": 100.5440,
+    "price": 16000,
+    "type": "condo",
+    "amenities": ["wifi", "desk", "laundry"],
+    "nearby": {"gym": 250, "supermarket": 400, "transit": 300, "mall": 1500, "flea_market": 1200},
+    "street": {"vibe": "quiet", "safety": 4},
+    "space_sqm": 28,
+    "reviews": [
+      {"stars": 5, "text": "Quiet soi, great cafes, 5 min walk to BTS."},
+      {"stars": 3, "text": "Older building but well kept."}
+    ]
+  },
+  {
+    "name": "Thonglor Lux 1BR",
+    "area": "Thong Lo",
+    "lat": 13.7240,
+    "lon": 100.5790,
+    "price": 32000,
+    "type": "condo",
+    "amenities": ["wifi", "desk", "gympool", "laundry"],
+    "nearby": {"gym": 150, "supermarket": 300, "transit": 450, "mall": 600, "flea_market": 2000},
+    "street": {"vibe": "lively", "safety": 5},
+    "space_sqm": 40,
+    "reviews": [
+      {"stars": 5, "text": "Nightlife at your door, gym in the building."},
+      {"stars": 2, "text": "Pricey and noisy on weekends."}
+    ]
+  },
+  {
+    "name": "Sathorn Saver Room",
+    "area": "Sathorn",
+    "lat": 13.7236,
+    "lon": 100.5290,
+    "price": 11000,
+    "type": "condo",
+    "amenities": ["wifi"],
+    "nearby": {"gym": 900, "supermarket": 250, "transit": 200, "mall": 1200, "flea_market": 1700},
+    "street": {"vibe": "quiet", "safety": 4},
+    "space_sqm": 22,
+    "reviews": [
+      {"stars": 4, "text": "Cheap, close to MRT, basic but clean."}
+    ]
+  },
+  {
+    "name": "Phrom Phong Pod Hostel",
+    "area": "Phrom Phong",
+    "lat": 13.7305,
+    "lon": 100.5697,
+    "price": 8000,
+    "type": "hostel",
+    "amenities": ["wifi", "laundry"],
+    "nearby": {"gym": 700, "supermarket": 350, "transit": 300, "mall": 250, "flea_market": 900},
+    "street": {"vibe": "lively", "safety": 4},
+    "space_sqm": 14,
+    "reviews": [
+      {"stars": 4, "text": "Social, central, but tiny rooms."}
+    ]
+  },
+  {
+    "name": "Ratchathewi Flat",
+    "area": "Ratchathewi",
+    "lat": 13.7517,
+    "lon": 100.5318,
+    "price": 15000,
+    "type": "condo",
+    "amenities": ["wifi", "desk", "kitchen"],
+    "nearby": {"gym": 600, "supermarket": 300, "transit": 350, "mall": 800, "flea_market": 1100},
+    "street": {"vibe": "quiet", "safety": 3},
+    "space_sqm": 30,
+    "reviews": [
+      {"stars": 4, "text": "Walk to Siam, good value, kitchen is a plus."},
+      {"stars": 3, "text": "Some street noise in the evening."}
+    ]
+  }
+]
