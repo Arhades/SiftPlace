@@ -17,7 +17,7 @@ function App() {
   const handleAdminLogin = (e: React.FormEvent) => {
     e.preventDefault();
     // Simple, secure founders access key
-    if (adminPasswordInput === "123456") {
+    if (adminPasswordInput === "Jiayous123!") {
       setIsAdminAuthenticated(true);
       setAdminError("");
       setAdminPasswordInput("");

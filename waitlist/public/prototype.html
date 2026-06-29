@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+<title>SiftPlace — find your place, anywhere</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* ============ Solar Friend design tokens ============ */
+  :root{
+    --surface:#fff8f6; --surface-low:#fff1ed; --surface-c:#ffe9e3; --surface-high:#ffe2da;
+    --container-lowest:#ffffff;
+    --on-surface:#2c160e; --on-variant:#5b5440; --outline-variant:#e7d8c2;
+    --primary:#ffc107; --primary-dim:#e0a800; --on-primary:#3a2a00;
+    --secondary:#fe6f42; --secondary-dim:#d9531f; --on-secondary:#ffffff;
+    --tertiary:#00629d; --tertiary-c:#cfe5ff; --on-tertiary-c:#00598f;
+    --ok:#1f8a4c; --ok-soft:#e3f5e9;
+    --warn:#b15c00; --warn-soft:#fff0d6;
+    --error:#ba1a1a; --error-soft:#ffdad6;
+    --page:#f3e7df;
+    --shadow:0 10px 30px -12px rgba(120,89,0,.28);
+    --shadow-sm:0 4px 14px -8px rgba(44,22,14,.35);
+  }
+  /* ============ Dark theme ============ */
+  :root[data-theme="dark"]{
+    --surface:#17130f; --surface-low:#1f1a15; --surface-c:#2a231c; --surface-high:#352c23;
+    --container-lowest:#221c17;
+    --on-surface:#f3ece4; --on-variant:#c4b6a6; --outline-variant:#3c332a;
+    --primary:#ffc107; --primary-dim:#ffcf3a; --on-primary:#3a2a00;
+    --secondary:#ff8a63; --secondary-dim:#d9531f; --on-secondary:#1a0f0c;
+    --tertiary:#8ec5ff; --tertiary-c:#16304a; --on-tertiary-c:#cfe5ff;
+    --ok:#5fd08a; --ok-soft:#15301f;
+    --warn:#ffc06b; --warn-soft:#3a2c12;
+    --error:#ffb4ab; --error-soft:#3a1714;
+    --page:#0e0b09;
+    --shadow:0 12px 34px -14px rgba(0,0,0,.6);
+    --shadow-sm:0 6px 18px -10px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  html{overflow-y:scroll}            /* keep a stable scrollbar so tabs don't shift */
+  body{
+    font-family:'Quicksand',system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    background:var(--surface); color:var(--on-surface);
+    -webkit-font-smoothing:antialiased; line-height:1.5; transition:background .2s, color .2s;
+  }
+  [hidden]{display:none !important}
+  .phone{max-width:440px; margin:0 auto; min-height:100vh; background:var(--surface); position:relative; overflow-x:hidden}
+  @media(min-width:480px){
+    body{background:var(--page); padding:24px 0}
+    .phone{min-height:auto; border-radius:36px; box-shadow:0 30px 80px -30px rgba(60,30,10,.5);
+      overflow:hidden; border:1px solid var(--outline-variant); min-height:760px}
+  }
+
+  /* ---- top app bar ---- */
+  .appbar{position:sticky; top:0; z-index:30; background:var(--surface);
+    display:flex; align-items:center; gap:10px; padding:16px 20px 12px; border-bottom:1px solid var(--outline-variant)}
+  .appbar .iconbtn{width:38px; height:38px; border-radius:50%; border:none; background:var(--surface-c);
+    color:var(--on-surface); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:transform .1s, background .15s; font-family:inherit}
+  .appbar .iconbtn:active{transform:scale(.92)}
+  .appbar .title{font-weight:700; font-size:18px; color:var(--primary-dim); letter-spacing:-.01em; flex:1; text-align:center}
+  .appbar .chip-ghost{border:1.5px solid var(--outline-variant); background:var(--container-lowest); color:var(--on-variant);
+    border-radius:999px; padding:7px 14px; font-size:13px; font-weight:700; cursor:pointer; font-family:inherit}
+
+  .pad{padding:20px}
+
+  /* progress */
+  .progress-row{display:flex; align-items:center; gap:14px; padding:18px 20px 4px}
+  .track{flex:1; height:12px; border-radius:999px; background:var(--surface-high); overflow:hidden}
+  .pfill{height:100%; border-radius:999px; background:linear-gradient(180deg,#ffd54a,var(--primary)); box-shadow:inset 0 2px 0 rgba(255,255,255,.6)}
+  .progress-row b{font-size:14px; color:var(--on-variant); font-weight:700; letter-spacing:.04em}
+
+  /* mascot speech card */
+  .speech{display:flex; align-items:center; gap:14px; background:var(--container-lowest);
+    border:1px solid var(--outline-variant); border-radius:24px; padding:16px 18px; box-shadow:var(--shadow); margin:8px 0 4px}
+  .avatar{width:64px; height:64px; border-radius:50%; flex-shrink:0;
+    background:radial-gradient(circle at 50% 38%, #fff3cf, #ffe08a); border:2.5px solid var(--primary-dim);
+    display:flex; align-items:center; justify-content:center}
+  .speech p{margin:0; font-size:17px; font-weight:700; line-height:1.35}
+  .speech p .accent{color:var(--secondary)}
+
+  h1.screen{font-size:30px; font-weight:700; letter-spacing:-.02em; margin:22px 0 6px}
+  .lede{color:var(--on-variant); font-size:15px; font-weight:500; margin:0 0 4px}
+
+  /* ---- preference block ---- */
+  .pref{margin-top:26px}
+  .pref-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:8px}
+  .pref-head .name{font-size:21px; font-weight:700}
+  .pref-head .name small{display:block; font-size:12.5px; font-weight:600; color:var(--on-variant)}
+  .pref-head .right{display:flex; align-items:center; gap:10px; flex-shrink:0}
+  .numbadge{min-width:38px; height:38px; padding:0 6px; border-radius:12px; background:var(--surface-c);
+    color:var(--on-surface); font-weight:700; font-size:19px; display:flex; align-items:center; justify-content:center}
+  .verdict{border:none; border-radius:999px; padding:8px 14px; font-size:13px; font-weight:700; color:#fff;
+    background:var(--secondary); white-space:nowrap; min-width:96px; text-align:center; box-shadow:0 3px 0 var(--secondary-dim)}
+  .verdict[data-level="0"],.verdict[data-level="1"]{background:#9aa0ad; box-shadow:0 3px 0 #767c88}
+  .verdict[data-level="4"]{background:var(--tertiary); box-shadow:0 3px 0 #00456e}
+
+  /* slider with growing thumb + fill */
+  input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:44px; background:transparent;
+    cursor:pointer; --thumb:26px; --pct:0; margin:0}
+  input[type=range]::-webkit-slider-runnable-track{height:14px; border-radius:999px;
+    background:linear-gradient(90deg, var(--primary-dim) calc(var(--pct)*1%), var(--surface-high) calc(var(--pct)*1%))}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; appearance:none;
+    width:var(--thumb); height:var(--thumb); border-radius:50%; background:var(--primary-dim);
+    border:4px solid var(--surface); box-shadow:0 3px 8px rgba(120,89,0,.45); margin-top:calc((14px - var(--thumb)) / 2)}
+  input[type=range]::-moz-range-track{height:14px; border-radius:999px; background:var(--surface-high)}
+  input[type=range]::-moz-range-progress{height:14px; border-radius:999px; background:var(--primary-dim)}
+  input[type=range]::-moz-range-thumb{width:var(--thumb); height:var(--thumb); border-radius:50%;
+    background:var(--primary-dim); border:4px solid var(--surface); box-shadow:0 3px 8px rgba(120,89,0,.45)}
+
+  .ticks{display:flex; justify-content:space-between; margin-top:4px}
+  .ticks button{flex:1; border:none; background:none; font-family:inherit; cursor:pointer;
+    font-size:12px; font-weight:700; color:var(--on-variant); opacity:.55; padding:3px 0; transition:.12s}
+  .ticks button.on{opacity:1; color:var(--primary-dim); transform:scale(1.25)}
+  .ends{display:flex; justify-content:space-between; font-size:11px; font-weight:700; letter-spacing:.04em;
+    color:var(--on-variant); text-transform:uppercase; margin-top:2px}
+  .hint{font-size:13.5px; color:var(--on-variant); font-weight:500; margin-top:8px}
+
+  .total-pill{display:inline-block; margin-top:18px; background:var(--surface-c); color:var(--on-surface);
+    font-weight:700; font-size:14px; border-radius:999px; padding:8px 16px}
+  .total-pill.over{background:var(--error-soft); color:var(--error)}
+
+  /* well / sunken group */
+  .well{background:var(--surface-low); border:1px solid var(--outline-variant); border-radius:24px; padding:18px; margin-top:18px}
+  .lbl{display:block; font-size:14px; font-weight:700; letter-spacing:.02em; margin:18px 0 9px; text-transform:uppercase; color:var(--on-variant)}
+  .lbl.tip{text-transform:none; letter-spacing:0; font-weight:600; color:var(--on-variant); font-size:13px; margin-top:6px}
+  .field{width:100%; font-family:inherit; font-size:16px; font-weight:600; color:var(--on-surface);
+    background:var(--container-lowest); border:2px solid var(--outline-variant); border-radius:999px;
+    padding:13px 18px; outline:none; transition:border-color .15s, background .15s}
+  .field:focus{border-color:var(--primary); background:var(--surface-low)}
+  textarea.field{border-radius:20px; resize:vertical; min-height:84px; line-height:1.45}
+  select.field{appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%235b5440' stroke-width='3' stroke-linecap='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 18px center; padding-right:44px}
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+  .other-input{margin-top:10px}
+
+  /* stepper */
+  .stepper{display:inline-flex; align-items:center; gap:0; background:var(--container-lowest);
+    border:2px solid var(--outline-variant); border-radius:999px; overflow:hidden}
+  .stepper button{width:46px; height:46px; border:none; background:none; font-size:22px; font-weight:700;
+    color:var(--primary-dim); cursor:pointer; font-family:inherit}
+  .stepper button:active{background:var(--surface-c)}
+  .stepper input{width:46px; text-align:center; border:none; background:none; font-family:inherit;
+    font-size:18px; font-weight:700; color:var(--on-surface); outline:none}
+
+  .chips{display:flex; flex-wrap:wrap; gap:9px}
+  .chip input{position:absolute; opacity:0; width:0; height:0}
+  .chip label{display:inline-block; cursor:pointer; user-select:none; border:2px solid var(--outline-variant);
+    background:var(--container-lowest); color:var(--on-surface); padding:9px 15px; border-radius:999px;
+    font-weight:700; font-size:14px; transition:all .12s}
+  .chip label:active{transform:scale(.95)}
+  .chip input:checked + label{background:var(--primary); border-color:var(--primary-dim); color:var(--on-primary); box-shadow:0 3px 0 var(--primary-dim)}
+  .chip.other input:checked + label{background:var(--tertiary-c); border-color:var(--tertiary); color:var(--on-tertiary-c); box-shadow:0 3px 0 #9cc4e8}
+
+  .smartnote{display:flex; gap:10px; align-items:flex-start; background:var(--tertiary-c); color:var(--on-tertiary-c);
+    border-radius:16px; padding:11px 14px; font-size:13px; font-weight:600; margin-top:10px}
+
+  /* squishy CTA */
+  .cta-wrap{padding:8px 20px 28px; position:sticky; bottom:0; background:linear-gradient(180deg,rgba(255,248,246,0),var(--surface) 38%)}
+  .cta{width:100%; border:none; cursor:pointer; font-family:inherit; background:var(--primary); color:var(--on-primary);
+    font-weight:700; font-size:17px; padding:17px; border-radius:20px; box-shadow:0 5px 0 var(--primary-dim);
+    transition:transform .08s, box-shadow .08s; letter-spacing:.01em}
+  .cta:active{transform:translateY(4px); box-shadow:0 1px 0 var(--primary-dim)}
+  .cta.secondary{background:var(--container-lowest); color:var(--secondary); box-shadow:0 5px 0 var(--outline-variant);
+    display:flex; align-items:center; justify-content:center; gap:10px; font-size:15px}
+  .badge-check{width:24px; height:24px; border-radius:50%; background:var(--primary); display:inline-flex;
+    align-items:center; justify-content:center; color:var(--on-primary); font-size:13px}
+
+  /* ============ APP / TABS ============ */
+  #app:not([hidden]){display:flex; flex-direction:column; min-height:100vh}   /* fill height so nav sits at bottom */
+  @media(min-width:480px){ #app:not([hidden]){min-height:760px} }
+  .panel{padding-bottom:96px; animation:fade .3s ease both; flex:1 0 auto}     /* grow so short tabs (Saved) still push nav down */
+  .panel-head{padding:18px 20px 4px}
+  .panel-head .small{font-size:13px; font-weight:600; color:var(--on-variant); margin:0}
+  .panel-head .small b{color:var(--on-surface)}
+  .panel-head h2{font-size:26px; font-weight:700; letter-spacing:-.01em; margin:8px 0 2px}
+  .editbtn{margin:12px 20px 0; width:calc(100% - 40px); border:2px solid var(--outline-variant);
+    background:var(--container-lowest); color:var(--on-surface); font-family:inherit; font-weight:700; font-size:14px;
+    border-radius:16px; padding:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:8px}
+
+  .smartbanner{margin:14px 20px 0; background:var(--tertiary-c); color:var(--on-tertiary-c); border-radius:18px; padding:14px 16px}
+  .smartbanner .h{font-size:12px; font-weight:700; letter-spacing:.05em; text-transform:uppercase; opacity:.85}
+  .smartbanner .tagrow{display:flex; flex-wrap:wrap; gap:7px; margin-top:9px}
+  .smartbanner .tag{background:var(--container-lowest); color:var(--tertiary); font-size:12.5px; font-weight:700; padding:5px 11px; border-radius:999px}
+
+  .match{background:var(--container-lowest); border:1px solid var(--outline-variant); border-radius:26px;
+    overflow:hidden; box-shadow:var(--shadow-sm); margin:16px 20px 0}
+  .match.top{box-shadow:0 14px 34px -14px rgba(255,193,7,.55); border-color:#ffe08a}
+  .match .photo{height:148px; position:relative; background-size:cover; background-position:center}
+  .match .photo .pills{position:absolute; left:12px; right:12px; top:12px; display:flex; justify-content:space-between; gap:8px}
+  .pill-dark{background:rgba(20,8,4,.72); color:#fff; backdrop-filter:blur(4px); font-size:12.5px; font-weight:700;
+    padding:6px 12px; border-radius:999px; display:inline-flex; align-items:center; gap:6px}
+  .pill-approve{background:var(--primary); color:var(--on-primary); font-size:12px; font-weight:700;
+    padding:6px 12px; border-radius:999px; display:inline-flex; align-items:center; gap:6px}
+  .heart{position:absolute; right:12px; bottom:12px; width:42px; height:42px; border-radius:50%; border:none;
+    background:rgba(255,255,255,.92); cursor:pointer; font-size:19px; display:flex; align-items:center; justify-content:center;
+    box-shadow:0 4px 12px rgba(0,0,0,.25); transition:transform .12s}
+  .heart:active{transform:scale(.85)}
+  .heart.on{background:var(--secondary)}
+  .match .body{padding:18px}
+  .match .body h3{margin:0 0 3px; font-size:19px; font-weight:700}
+  .match .area{display:flex; align-items:center; gap:6px; color:var(--on-variant); font-size:13.5px; font-weight:600; margin-bottom:4px}
+  .price{font-size:14px; font-weight:600; color:var(--on-variant)}
+  .price b{font-size:22px; color:var(--on-surface); font-weight:700}
+  .commute{margin-top:14px; border-radius:18px; padding:13px 15px; background:var(--surface-low)}
+  .commute .top{display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:700;
+    letter-spacing:.03em; text-transform:uppercase; color:var(--on-variant)}
+  .lvl{font-size:11.5px; font-weight:700; padding:3px 9px; border-radius:999px}
+  .lvl.low{background:var(--ok-soft); color:var(--ok)}
+  .lvl.moderate{background:var(--warn-soft); color:var(--warn)}
+  .lvl.high{background:var(--error-soft); color:var(--error)}
+  .commute .big{font-size:20px; font-weight:700; margin-top:6px; color:var(--secondary-dim)}
+  .commute .sub{font-size:12.5px; color:var(--on-variant); font-weight:600; margin-top:2px}
+  .tags{display:flex; flex-wrap:wrap; gap:7px; margin-top:13px}
+  .tag2{font-size:12.5px; font-weight:700; padding:6px 11px; border-radius:999px; background:var(--surface-c);
+    color:var(--on-surface); display:inline-flex; align-items:center; gap:5px}
+  .tag2.met{background:var(--ok-soft); color:var(--ok)}
+  .review{margin-top:13px; font-size:14px; font-weight:600; color:var(--on-variant); font-style:italic; line-height:1.45}
+  .review .stars{font-style:normal; color:var(--primary-dim); margin-left:4px}
+  .match .view{width:100%; margin-top:16px; border:none; cursor:pointer; font-family:inherit; background:var(--primary-dim);
+    color:#fff; font-weight:700; font-size:15px; padding:13px; border-radius:16px; box-shadow:0 4px 0 #a8810a; transition:transform .08s, box-shadow .08s}
+  .match .view:active{transform:translateY(3px); box-shadow:0 1px 0 #a8810a}
+
+  .insight{margin:24px 20px 0; background:var(--container-lowest); border:1px solid var(--outline-variant);
+    border-radius:26px; padding:20px; box-shadow:var(--shadow-sm)}
+  .insight .eyebrow{font-size:12px; font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--on-variant)}
+  .friend{display:flex; gap:13px; margin-top:14px}
+  .friend .av{width:48px; height:48px; border-radius:50%; flex-shrink:0;
+    background:radial-gradient(circle at 50% 38%, #fff3cf, #ffe08a); border:2px solid var(--primary-dim);
+    display:flex; align-items:center; justify-content:center}
+  .friend .quote{margin:0; font-size:15px; font-weight:600; line-height:1.45}
+  .friend .by{font-size:12px; font-weight:700; color:var(--tertiary); margin-top:6px; display:flex; align-items:center; gap:5px}
+  .metrics{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:18px}
+  .metric{border-radius:18px; padding:14px; text-align:left}
+  .metric.safe{background:var(--surface-c)} .metric.rent{background:var(--surface-low)}
+  .metric.bus{background:var(--secondary); color:#fff; grid-column:span 2}
+  .metric .k{font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; opacity:.85}
+  .metric .v{font-size:24px; font-weight:700; margin-top:3px}
+  .metric .v small{font-size:14px; font-weight:600; opacity:.7}
+  .metric .note{font-size:12px; font-weight:600; opacity:.85; margin-top:2px}
+
+  /* areas */
+  .area-card{display:flex; gap:14px; align-items:center; margin:14px 20px 0; background:var(--container-lowest);
+    border:1px solid var(--outline-variant); border-radius:22px; padding:16px; box-shadow:var(--shadow-sm)}
+  .area-card .emoji{width:52px; height:52px; border-radius:16px; background:var(--surface-c); display:flex;
+    align-items:center; justify-content:center; font-size:26px; flex-shrink:0}
+  .area-card h3{margin:0 0 2px; font-size:18px; font-weight:700}
+  .area-card .meta{font-size:13px; font-weight:600; color:var(--on-variant)}
+  .area-card .row2{display:flex; gap:8px; margin-top:8px; flex-wrap:wrap}
+  .area-card .mini{font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; background:var(--surface-low); color:var(--on-surface)}
+  .area-card .mini.s{background:var(--ok-soft); color:var(--ok)}
+
+  /* guide */
+  .guide-card{margin:14px 20px 0; background:var(--container-lowest); border:1px solid var(--outline-variant);
+    border-radius:20px; box-shadow:var(--shadow-sm); overflow:hidden}
+  .guide-card summary{list-style:none; cursor:pointer; padding:16px 18px; display:flex; align-items:center; gap:12px;
+    font-weight:700; font-size:15.5px}
+  .guide-card summary::-webkit-details-marker{display:none}
+  .guide-card .ic{width:36px; height:36px; border-radius:12px; background:var(--surface-c); display:flex;
+    align-items:center; justify-content:center; font-size:18px; flex-shrink:0}
+  .guide-card summary .chev{margin-left:auto; color:var(--on-variant); transition:transform .2s}
+  .guide-card[open] summary .chev{transform:rotate(180deg)}
+  .guide-card p{margin:0; padding:0 18px 18px 66px; font-size:14px; font-weight:500; color:var(--on-variant); line-height:1.5}
+
+  .empty{margin:60px 30px; text-align:center; color:var(--on-variant)}
+  .empty .av{width:80px; height:80px; border-radius:50%; margin:0 auto 16px;
+    background:radial-gradient(circle at 50% 38%, #fff3cf, #ffe08a); border:3px solid var(--primary-dim);
+    display:flex; align-items:center; justify-content:center}
+  .empty h3{font-size:19px; color:var(--on-surface); margin:0 0 6px}
+  .empty p{font-size:14px; font-weight:600; margin:0}
+
+  /* bottom nav */
+  .nav{position:fixed; bottom:0; left:0; right:0; z-index:40; max-width:440px; margin:0 auto;
+    display:flex; justify-content:space-around; background:var(--container-lowest); border-top:1px solid var(--outline-variant);
+    padding:10px 6px calc(12px + env(safe-area-inset-bottom))}
+  @media(min-width:480px){.nav{position:sticky; border-radius:0}}
+  .nav button{border:none; background:none; cursor:pointer; font-family:inherit; color:var(--on-variant); font-size:11px;
+    font-weight:700; display:flex; flex-direction:column; align-items:center; gap:4px; padding:4px 10px; position:relative}
+  .nav button.active{color:var(--secondary)}
+  .nav svg{width:22px; height:22px}
+  .nav .dot{position:absolute; top:0; right:6px; min-width:16px; height:16px; padding:0 3px; border-radius:999px;
+    background:var(--secondary); color:#fff; font-size:10px; display:none; align-items:center; justify-content:center}
+  .nav .dot.show{display:flex}
+
+  @keyframes fade{from{opacity:0; transform:translateY(8px)}to{opacity:1; transform:none}}
+</style>
+</head>
+<body>
+<div class="phone">
+
+  <!-- ============================ INTAKE ============================ -->
+  <section id="intake">
+    <div class="appbar">
+      <button class="iconbtn" id="themeToggle" type="button" aria-label="Toggle dark mode">🌙</button>
+      <div class="title">SiftPlace</div>
+      <span style="width:38px"></span>
+    </div>
+
+    <div class="progress-row">
+      <div class="track"><div class="pfill" style="width:50%"></div></div><b>1 / 2</b>
+    </div>
+
+    <div class="pad">
+      <div class="speech">
+        <div class="avatar" aria-hidden="true">
+          <svg width="38" height="38" viewBox="0 0 48 48" fill="none">
+            <ellipse cx="24" cy="30" rx="14" ry="13" fill="#ffd24a"/><circle cx="24" cy="17" r="11" fill="#ffdf6b"/>
+            <circle cx="20" cy="16" r="2" fill="#3a2a00"/><circle cx="28" cy="16" r="2" fill="#3a2a00"/>
+            <path d="M22 20 l2 2 l2 -2 z" fill="#fe6f42"/>
+            <path d="M14 9 l5 4 M34 9 l-5 4" stroke="#e0a800" stroke-width="2.4" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <p>Let's find your <span class="accent">perfect home</span> — wherever you're headed!</p>
+      </div>
+
+      <h1 class="screen">Tell us what matters</h1>
+      <p class="lede">Slide toward what you care about. Pour more onto one thing and there's less for the rest — that trade-off is what helps us match you. You've got <b>20 points</b> to share.</p>
+
+      <div class="pref">
+        <div class="pref-head">
+          <div class="name">Monthly Budget<small>Staying within your cash</small></div>
+          <div class="right"><span class="numbadge" id="num-cost">8</span><span class="verdict" id="verdict-cost">Balanced</span></div>
+        </div>
+        <input type="range" id="w_cost" min="0" max="10" value="8" data-key="cost" />
+        <div class="ticks" data-for="w_cost"></div>
+        <div class="ends"><span>Flexible</span><span>Frugal</span></div>
+      </div>
+
+      <div class="pref">
+        <div class="pref-head">
+          <div class="name">Location Proximity<small>Commute &amp; what's nearby</small></div>
+          <div class="right"><span class="numbadge" id="num-location">8</span><span class="verdict" id="verdict-location">Balanced</span></div>
+        </div>
+        <input type="range" id="w_location" min="0" max="10" value="8" data-key="location" />
+        <div class="ticks" data-for="w_location"></div>
+        <div class="ends"><span>Flexible</span><span>Next to work</span></div>
+      </div>
+
+      <div class="pref">
+        <div class="pref-head">
+          <div class="name">Room &amp; Comfort<small>Space, desk, amenities</small></div>
+          <div class="right"><span class="numbadge" id="num-living">4</span><span class="verdict" id="verdict-living">Balanced</span></div>
+        </div>
+        <input type="range" id="w_living" min="0" max="10" value="4" data-key="living" />
+        <div class="ticks" data-for="w_living"></div>
+        <div class="ends"><span>Basic is ok</span><span>Must be nice</span></div>
+        <p class="hint">We prioritise study-desk size, natural light, and a peaceful street.</p>
+      </div>
+
+      <div class="total-pill" id="total">Attention spent: 20 / 20</div>
+
+      <div class="well">
+        <span class="lbl" style="margin-top:0">The practical bits</span>
+
+        <span class="lbl" style="margin-top:0">Which city are you moving to?</span>
+        <input class="field" id="city" placeholder="e.g. Bangkok, Tokyo, Lisbon, Berlin" value="Bangkok" />
+
+        <div class="two">
+          <div>
+            <span class="lbl" style="margin-top:0">Budget (per month)</span>
+            <input class="field" type="number" id="budget" value="20000" />
+          </div>
+          <div>
+            <span class="lbl" style="margin-top:0">Days commuting</span>
+            <input class="field" type="number" id="commute_days" value="5" min="0" max="7" />
+          </div>
+        </div>
+
+        <span class="lbl">How long are you staying?</span>
+        <select class="field" id="stay">
+          <option value="1-2">1–2 months</option>
+          <option value="3-4" selected>3–4 months (a semester)</option>
+          <option value="5-6">5–6 months</option>
+          <option value="12+">A year or more</option>
+        </select>
+
+        <span class="lbl">How many staying together?</span>
+        <div class="stepper">
+          <button type="button" data-step="-1" aria-label="fewer">−</button>
+          <input id="people" value="1" readonly aria-label="number of people" />
+          <button type="button" data-step="1" aria-label="more">+</button>
+        </div>
+
+        <span class="lbl">Where do you commute to?</span>
+        <input class="field" id="anchor_text" placeholder="Type your campus or office (e.g. Imperial College)" />
+        <p class="lbl tip">Your daily destination, so we can weigh the real commute.</p>
+
+        <span class="lbl">Test anchor <span style="text-transform:none;font-weight:600;color:var(--on-variant)">(dev only — sets the demo's coordinates)</span></span>
+        <select class="field" id="anchor">
+          <option value="13.7384,100.5306">Chulalongkorn University</option>
+          <option value="13.7563,100.5018">Thammasat (Salaya shuttle)</option>
+          <option value="13.7456,100.5340">Siam</option>
+          <option value="13.7370,100.5600">Asok (Sukhumvit)</option>
+          <option value="13.7236,100.5290">Sathorn / CBD</option>
+        </select>
+
+        <span class="lbl">Longest commute you'd accept</span>
+        <select class="field" id="max_commute">
+          <option value="0">No limit</option>
+          <option value="20">Under 20 min</option>
+          <option value="40" selected>Under 40 min</option>
+          <option value="60">Under 60 min</option>
+        </select>
+
+        <span class="lbl">What do you want nearby?</span>
+        <div class="chips" id="nearby">
+          <span class="chip"><input type="checkbox" id="n_gym" value="gym" checked><label for="n_gym">🥊 Gym / martial arts</label></span>
+          <span class="chip"><input type="checkbox" id="n_sup" value="supermarket" checked><label for="n_sup">🛒 Supermarket</label></span>
+          <span class="chip"><input type="checkbox" id="n_tr" value="transit" checked><label for="n_tr">🚆 Train / metro</label></span>
+          <span class="chip"><input type="checkbox" id="n_mall" value="mall"><label for="n_mall">🛍️ Mall</label></span>
+          <span class="chip"><input type="checkbox" id="n_flea" value="flea_market"><label for="n_flea">🎏 Flea market</label></span>
+          <span class="chip other"><input type="checkbox" id="n_other" data-other="nearby"><label for="n_other">＋ Other</label></span>
+        </div>
+        <input class="field other-input" id="nearby_other" placeholder="e.g. hospital, co-working, vegan cafe" hidden>
+
+        <span class="lbl">Street vibe</span>
+        <div class="chips" id="vibe">
+          <span class="chip"><input type="radio" name="vibe" id="vibe_any" value="" checked><label for="vibe_any">Either is fine</label></span>
+          <span class="chip"><input type="radio" name="vibe" id="vibe_quiet" value="quiet"><label for="vibe_quiet">🌿 Quiet</label></span>
+          <span class="chip"><input type="radio" name="vibe" id="vibe_lively" value="lively"><label for="vibe_lively">✨ Lively</label></span>
+        </div>
+
+        <span class="lbl">Place type</span>
+        <div class="chips" id="types">
+          <span class="chip"><input type="checkbox" id="t_condo" value="condo" checked><label for="t_condo">Condo / apt</label></span>
+          <span class="chip"><input type="checkbox" id="t_hostel" value="hostel"><label for="t_hostel">Hostel</label></span>
+          <span class="chip"><input type="checkbox" id="t_hotel" value="hotel"><label for="t_hotel">Serviced hotel</label></span>
+          <span class="chip other"><input type="checkbox" id="t_other" data-other="types"><label for="t_other">＋ Other</label></span>
+        </div>
+        <input class="field other-input" id="types_other" placeholder="e.g. co-living, dorm, shophouse" hidden>
+
+        <span class="lbl">Must-have amenities</span>
+        <div class="chips" id="amenities">
+          <span class="chip"><input type="checkbox" id="a_wifi" value="wifi" checked><label for="a_wifi">Fast wifi</label></span>
+          <span class="chip"><input type="checkbox" id="a_desk" value="desk" checked><label for="a_desk">Study desk</label></span>
+          <span class="chip"><input type="checkbox" id="a_kit" value="kitchen"><label for="a_kit">Kitchen</label></span>
+          <span class="chip"><input type="checkbox" id="a_laun" value="laundry"><label for="a_laun">Laundry</label></span>
+          <span class="chip"><input type="checkbox" id="a_gp" value="gympool"><label for="a_gp">Building gym/pool</label></span>
+          <span class="chip other"><input type="checkbox" id="a_other" data-other="amenities"><label for="a_other">＋ Other</label></span>
+        </div>
+        <input class="field other-input" id="amenities_other" placeholder="e.g. balcony, pet-friendly, aircon" hidden>
+
+        <span class="lbl">Move-in month</span>
+        <input class="field" type="month" id="movein" />
+
+        <span class="lbl">Furnishing</span>
+        <div class="chips" id="furnish">
+          <span class="chip"><input type="radio" name="furnish" id="f_furn" value="furnished" checked><label for="f_furn">Furnished</label></span>
+          <span class="chip"><input type="radio" name="furnish" id="f_semi" value="semi"><label for="f_semi">Semi</label></span>
+          <span class="chip"><input type="radio" name="furnish" id="f_unf" value="unfurnished"><label for="f_unf">Unfurnished</label></span>
+        </div>
+
+        <span class="lbl">Deal-breakers <span style="text-transform:none;font-weight:600;color:var(--on-variant)">(must-haves for you)</span></span>
+        <div class="chips" id="needs">
+          <span class="chip"><input type="checkbox" id="need_female" value="female_only"><label for="need_female">👩 Female-only building</label></span>
+          <span class="chip"><input type="checkbox" id="need_pets" value="pets"><label for="need_pets">🐾 Pet-friendly</label></span>
+          <span class="chip"><input type="checkbox" id="need_park" value="parking"><label for="need_park">🅿️ Parking</label></span>
+          <span class="chip"><input type="checkbox" id="need_ac" value="aircon" checked><label for="need_ac">❄️ Air-con</label></span>
+          <span class="chip"><input type="checkbox" id="need_access" value="accessible"><label for="need_access">♿ Step-free access</label></span>
+        </div>
+      </div>
+
+      <!-- free text NLP field -->
+      <div class="well">
+        <span class="lbl" style="margin-top:0">✦ Anything else? <span style="text-transform:none;font-weight:600;color:var(--on-variant)">(optional)</span></span>
+        <textarea class="field" id="freeText" placeholder="Tell Sift in your own words — e.g. &quot;I do Muay Thai 4x a week, want a quiet desk-friendly studio under 18k, walkable to the metro, near vegetarian food.&quot;"></textarea>
+        <p class="lbl tip">Our smart matching reads this to fine-tune your shortlist.</p>
+        <div class="smartnote" id="livePreview" hidden></div>
+      </div>
+    </div>
+
+    <div class="cta-wrap">
+      <button class="cta secondary" type="button" disabled style="opacity:.85; margin-bottom:12px; cursor:default">
+        <span class="badge-check">✓</span> Expert-verified listings only
+      </button>
+      <button class="cta" id="go" type="button">Find my best matches →</button>
+    </div>
+  </section>
+
+  <!-- ============================ APP (TABS) ============================ -->
+  <main id="app" hidden>
+    <div class="appbar">
+      <button class="iconbtn" id="appBack" aria-label="Edit search">&larr;</button>
+      <div class="title" id="appTitle">Your best matches</div>
+      <button class="chip-ghost" id="appAction" onclick="goEdit()">Edit</button>
+    </div>
+
+    <!-- MATCHES -->
+    <section id="panel-matches" class="panel">
+      <div class="panel-head"><p class="small" id="ctx">Based on your priorities.</p></div>
+      <div class="smartbanner" id="smartBanner" hidden>
+        <div class="h">✦ From your note, Sift also prioritised</div>
+        <div class="tagrow" id="smartTags"></div>
+      </div>
+      <div id="matches"></div>
+
+      <div class="insight">
+        <div class="eyebrow">Local insight</div>
+        <div class="friend">
+          <div class="av" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 48 48" fill="none"><ellipse cx="24" cy="30" rx="14" ry="13" fill="#ffd24a"/>
+            <circle cx="24" cy="17" r="11" fill="#ffdf6b"/><circle cx="20" cy="16" r="2" fill="#3a2a00"/><circle cx="28" cy="16" r="2" fill="#3a2a00"/>
+            <path d="M22 20 l2 2 l2 -2 z" fill="#fe6f42"/></svg>
+          </div>
+          <div>
+            <p class="quote" id="insight-quote">—</p>
+            <div class="by">✓ Verified by Sift · your local guide</div>
+          </div>
+        </div>
+        <div class="metrics">
+          <div class="metric safe"><div class="k">Neighbourhood safety</div><div class="v" id="m-safe">—</div><div class="note">Good lighting at night</div></div>
+          <div class="metric rent"><div class="k">Avg rent here</div><div class="v" id="m-rent">—</div><div class="note">For your filters</div></div>
+          <div class="metric bus"><div class="k">Typical wait for transit</div><div class="v" id="m-bus">—</div><div class="note">At peak hours</div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SAVED -->
+    <section id="panel-saved" class="panel" hidden>
+      <div class="panel-head"><h2>Saved</h2><p class="small">Tap the heart on any match to keep it here.</p></div>
+      <div id="savedList"></div>
+    </section>
+
+    <!-- AREAS -->
+    <section id="panel-areas" class="panel" hidden>
+      <div class="panel-head"><h2>Explore areas</h2><p class="small">Neighbourhoods at a glance — vibe, safety and typical rent. <b>Sample city: Bangkok.</b></p></div>
+      <div id="areasList"></div>
+    </section>
+
+    <!-- GUIDE -->
+    <section id="panel-guide" class="panel" hidden>
+      <div class="panel-head"><h2>Rent safely</h2><p class="small">Avoid the classic newcomer mistakes. Sift's quick checklist.</p></div>
+      <div id="guideList"></div>
+    </section>
+
+    <nav class="nav">
+      <button data-tab="matches" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>Matches
+      </button>
+      <button data-tab="saved">
+        <span class="dot" id="savedDot">0</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.5-1.5 3-3.2 3-5.5A3.5 3.5 0 0 0 12 6 3.5 3.5 0 0 0 2 8.5C2 10.8 3.5 12.5 5 14l7 7z"/></svg>Saved
+      </button>
+      <button data-tab="areas">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>Areas
+      </button>
+      <button data-tab="guide">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 9a3 3 0 1 1 4 2.8c-.8.4-1 .9-1 1.7"/><path d="M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg>Guide
+      </button>
+    </nav>
+  </main>
+</div>
+
+<script>
+/* =============================== DATA =============================== */
+const LISTINGS = [
+  {name:"Ari Garden Studio", area:"Ari", lat:13.7797, lon:100.5440, price:16000, type:"condo",
+   amenities:["wifi","desk","laundry"], nearby:{gym:250,supermarket:400,transit:300,mall:1500,flea_market:1200},
+   street:{vibe:"quiet",safety:4}, space_sqm:28, photo:"linear-gradient(135deg,#a8c8a0,#6f9c7a)",
+   reviews:[{stars:5,text:"Quiet soi, great cafes, 5 min walk to the train."},{stars:3,text:"Older building but well kept."}]},
+  {name:"Thonglor Lux 1BR", area:"Thong Lo", lat:13.7240, lon:100.5790, price:32000, type:"condo",
+   amenities:["wifi","desk","gympool","laundry"], nearby:{gym:150,supermarket:300,transit:450,mall:600,flea_market:2000},
+   street:{vibe:"lively",safety:5}, space_sqm:40, photo:"linear-gradient(135deg,#c9a0c8,#8a6f9c)",
+   reviews:[{stars:5,text:"Nightlife at your door, gym in the building."},{stars:2,text:"Pricey and noisy on weekends."}]},
+  {name:"Sathorn Saver Room", area:"Sathorn", lat:13.7236, lon:100.5290, price:11000, type:"condo",
+   amenities:["wifi"], nearby:{gym:900,supermarket:250,transit:200,mall:1200,flea_market:1700},
+   street:{vibe:"quiet",safety:4}, space_sqm:22, photo:"linear-gradient(135deg,#9cb4c9,#6f859c)",
+   reviews:[{stars:4,text:"Cheap, close to the metro, basic but clean."}]},
+  {name:"Phrom Phong Pod Hostel", area:"Phrom Phong", lat:13.7305, lon:100.5697, price:8000, type:"hostel",
+   amenities:["wifi","laundry"], nearby:{gym:700,supermarket:350,transit:300,mall:250,flea_market:900},
+   street:{vibe:"lively",safety:4}, space_sqm:14, photo:"linear-gradient(135deg,#e0b48a,#c9925f)",
+   reviews:[{stars:4,text:"Social, central, but tiny rooms."}]},
+  {name:"Ratchathewi Flat", area:"Ratchathewi", lat:13.7517, lon:100.5318, price:15000, type:"condo",
+   amenities:["wifi","desk","kitchen"], nearby:{gym:600,supermarket:300,transit:350,mall:800,flea_market:1100},
+   street:{vibe:"quiet",safety:3}, space_sqm:30, photo:"linear-gradient(135deg,#a0c4c9,#6f9499)",
+   reviews:[{stars:4,text:"Walk to the centre, good value, kitchen is a plus."},{stars:3,text:"Some street noise in the evening."}]}
+];
+
+const AREAS = [
+  {name:"Ari", emoji:"🌿", vibe:"Quiet & leafy", safety:8, rent:16000, good:"Cafés · young pros"},
+  {name:"Samyan", emoji:"📚", vibe:"Campus core", safety:8, rent:14000, good:"Next to campus"},
+  {name:"Ratchathewi", emoji:"🎓", vibe:"Student-friendly", safety:6, rent:15000, good:"Walk to centre"},
+  {name:"Sathorn", emoji:"🏙️", vibe:"Business calm", safety:8, rent:11000, good:"CBD · metro"},
+  {name:"Phrom Phong", emoji:"🛍️", vibe:"Central & social", safety:8, rent:8000, good:"Malls · hostels"},
+  {name:"Thong Lo", emoji:"✨", vibe:"Lively nightlife", safety:10, rent:32000, good:"Expats · dining"},
+];
+
+const GUIDE = [
+  {ic:"👀", q:"Never pay a deposit before viewing", a:"If a landlord pushes for a wire transfer before you've seen the unit (or done a video walkthrough), walk away. This is the #1 scam in student housing groups."},
+  {ic:"🪪", q:"Verify the landlord actually owns it", a:"Ask for the title deed (proof of ownership) and the owner's ID, then check the names match. Sub-letting scams are common around campuses."},
+  {ic:"📄", q:"Always get a written contract", a:"Insist on a signed lease stating rent, deposit, term and what's included. Keep a copy. Verbal-only deals leave you with no protection."},
+  {ic:"🌧️", q:"Check if the street floods", a:"Some streets flood badly in the local rainy season. Ask in the city's subreddit/forum or look for water-line marks on ground-floor walls before committing."},
+  {ic:"📆", q:"Know the short-stay lease gap", a:"Many landlords want 1-year leases and short-term rentals are often restricted under 30 days. Target serviced apartments and monthly rentals — that's the student sweet spot."},
+  {ic:"🚩", q:"Too cheap is a red flag", a:"A listing far below the area average usually means hidden costs, a bad location, or a fake. Compare against the 'Avg rent' in the Areas tab first."},
+];
+
+/* =============================== ENGINE (ported from scoring.py) =============================== */
+const clamp = (x, lo=0, hi=1) => Math.max(lo, Math.min(hi, x));
+function haversineM(a,b,c,d){const R=6371000,r=x=>x*Math.PI/180;const p=r(c-a),q=r(d-b);
+  const s=Math.sin(p/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(q/2)**2;return 2*R*Math.asin(Math.sqrt(s));}
+function estimateCommute(km,days){return {minutes:Math.round((km*1.3)/15*60), monthly:Math.round((20+10*km)*2*days*4.3)};}
+function distanceScore(m,good=300,bad=2000){if(m<=good)return 1;if(m>=bad)return 0;return 1-(m-good)/(bad-good);}
+function scoreListing(L,p){
+  const km=haversineM(L.lat,L.lon,p.anchor[0],p.anchor[1])/1000;
+  const c=estimateCommute(km,p.commute_days), trueCost=L.price+c.monthly;
+  const ratio=trueCost/Math.max(p.budget,1);
+  let costS; if(ratio<=0.8)costS=1; else if(ratio>=1.2)costS=0.1; else costS=clamp(1-(ratio-0.8)/0.4*0.9,0.1,1);
+  const wants=p.nearby;
+  const ws=wants.length?wants.map(w=>distanceScore(L.nearby[w]??99999)):[0.5];
+  const vibeMatch=(p.vibe&&L.street.vibe===p.vibe)?1:0;
+  const locationS=0.7*(ws.reduce((a,b)=>a+b,0)/ws.length)+0.2*(L.street.safety/5)+0.1*vibeMatch;
+  const req=p.amenities;
+  const amenS=req.length?req.filter(a=>L.amenities.includes(a)).length/req.length:0.6;
+  const typeS=(p.types.length?p.types.includes(L.type):true)?1:0.3;
+  // bigger group → space matters more
+  const spaceNeed=30+(p.people-1)*10;
+  const spaceS=clamp((L.space_sqm||0)/spaceNeed);
+  const livingS=0.5*amenS+0.3*typeS+0.2*spaceS;
+  const w=p.weights, tw=(w.cost+w.location+w.living)||1, f={cost:w.cost/tw,location:w.location/tw,living:w.living/tw};
+  // tolerance: drag the score down if the commute blows past the user's accepted max
+  let tol=1;
+  if(p.maxCommute>0 && c.minutes>p.maxCommute){ tol=clamp(1-(c.minutes-p.maxCommute)/Math.max(p.maxCommute,1),0.3,1); }
+  const total=(f.cost*costS+f.location*locationS+f.living*livingS)*tol;
+  const met=wants.filter(w=>(L.nearby[w]??99999)<=1000);
+  return {name:L.name,area:L.area,type:L.type,vibe:L.street.vibe,safety:L.street.safety,photo:L.photo,
+    score:Math.round(total*100),rent:L.price,trueCost,commuteMin:c.minutes,commuteCost:c.monthly,
+    met,matchedAmenities:req.filter(a=>L.amenities.includes(a)),reviews:L.reviews||[]};
+}
+const rank=(ls,p,n=5)=>ls.map(L=>scoreListing(L,p)).sort((a,b)=>b.score-a.score).slice(0,n);
+
+/* =============================== NLP-ish note parser (placeholder for real NLP) =============================== */
+function parseNote(note){
+  const t=(note||'').toLowerCase(), det=[], add={amen:[],near:[],vibe:null,wcost:0,wloc:0,wliv:0};
+  const rules=[
+    [/quiet|peaceful|calm|chill/, ()=>{add.vibe='quiet';det.push('quiet street')}],
+    [/lively|nightlife|social|vibrant|party/, ()=>{add.vibe='lively';det.push('lively area')}],
+    [/desk|study|wfh|work from home/, ()=>{add.amen.push('desk');det.push('study desk')}],
+    [/kitchen|cook/, ()=>{add.amen.push('kitchen');det.push('kitchen')}],
+    [/laundry|washing/, ()=>{add.amen.push('laundry');det.push('laundry')}],
+    [/wifi|internet/, ()=>{add.amen.push('wifi');det.push('fast wifi')}],
+    [/pool|gym in|building gym/, ()=>{add.amen.push('gympool');det.push('building gym/pool')}],
+    [/gym|muay thai|boxing|workout|martial/, ()=>{add.near.push('gym');det.push('gym nearby')}],
+    [/bts|mrt|train|station|transit|metro|subway|skytrain/, ()=>{add.near.push('transit');det.push('near train/metro')}],
+    [/supermarket|grocery|7-eleven|seven|market/, ()=>{add.near.push('supermarket');det.push('supermarket')}],
+    [/cheap|budget|afford|save|tight|under \d/, ()=>{add.wcost=2;det.push('keeping cost low')}],
+    [/close|near|walk|walkable|short commute/, ()=>{add.wloc=2;det.push('short commute')}],
+    [/comfort|cozy|spacious|big room|nice room|natural light/, ()=>{add.wliv=2;det.push('comfort')}],
+  ];
+  rules.forEach(([re,fn])=>{ if(re.test(t)) fn(); });
+  return {add, detected:[...new Set(det)]};
+}
+
+/* =============================== THEME =============================== */
+const themeBtn=document.getElementById('themeToggle');
+function applyTheme(dark){
+  document.documentElement.dataset.theme = dark ? 'dark' : '';
+  if(themeBtn) themeBtn.textContent = dark ? '☀️' : '🌙';
+}
+applyTheme(!!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
+if(themeBtn) themeBtn.onclick=()=>applyTheme(document.documentElement.dataset.theme!=='dark');
+
+/* =============================== GEOCODING (free, OpenStreetMap Nominatim) =============================== */
+// Turns a typed place ("Imperial College London") into coordinates, right in the browser.
+// For production this should move to the FastAPI backend so you can cache results and
+// respect Nominatim's usage policy (max ~1 request/second).
+async function geocode(query){
+  try{
+    const url="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(query);
+    const r=await fetch(url,{headers:{'Accept':'application/json'}});
+    if(!r.ok) return null;
+    const d=await r.json();
+    if(!d.length) return null;
+    return {lat:+d[0].lat, lon:+d[0].lon, label:d[0].display_name};
+  }catch(e){ return null; }
+}
+
+/* =============================== INTAKE INTERACTIONS =============================== */
+const $=id=>document.getElementById(id);
+const sliders=["cost","location","living"].map(k=>$("w_"+k));
+const VERDICTS=["Don't mind","Don't mind","Flexible","Flexible","Balanced","Balanced","Balanced","Leaning","Leaning","Crucial","Crucial"];
+
+function styleSlider(s){
+  const v=+s.value;
+  s.style.setProperty('--pct', v/10*100);
+  s.style.setProperty('--thumb', (22+v*2)+'px');   // 22px → 42px as value rises
+  const ticks=document.querySelector('.ticks[data-for="'+s.id+'"]');
+  if(ticks) [...ticks.children].forEach((b,i)=>b.classList.toggle('on', i===v));
+}
+function refresh(){
+  let t=0;
+  sliders.forEach(s=>{
+    t+=+s.value; const k=s.dataset.key, lvl=+s.value;
+    $("num-"+k).textContent=lvl;
+    const vd=$("verdict-"+k); vd.textContent=VERDICTS[lvl]; vd.dataset.level=Math.min(4,Math.round(lvl/2.5));
+    styleSlider(s);
+  });
+  const el=$("total"); el.textContent="Attention spent: "+t+" / 20"; el.classList.toggle("over", t>20);
+  return t;
+}
+// build clickable 0-10 ticks
+document.querySelectorAll('.ticks').forEach(row=>{
+  const s=$(row.dataset.for);
+  for(let i=0;i<=10;i++){
+    const b=document.createElement('button'); b.type='button'; b.textContent=i;
+    b.onclick=()=>{ s.value=i; refresh(); };
+    row.appendChild(b);
+  }
+});
+sliders.forEach(s=>s.addEventListener("input",refresh));
+
+// stepper
+document.querySelectorAll('[data-step]').forEach(b=>b.onclick=()=>{
+  const inp=$("people"); inp.value=clamp(+inp.value+(+b.dataset.step),1,8);
+});
+// "Other" reveal
+document.querySelectorAll('[data-other]').forEach(cb=>cb.addEventListener('change',()=>{
+  const f=$(cb.dataset.other+"_other"); f.hidden=!cb.checked; if(cb.checked) f.focus();
+}));
+// live note preview
+$("freeText").addEventListener('input', e=>{
+  const {detected}=parseNote(e.target.value); const box=$("livePreview");
+  if(detected.length){ box.hidden=false; box.innerHTML='✦ Sift picked up: <b>'+detected.join(', ')+'</b>'; }
+  else box.hidden=true;
+});
+
+const checked=id=>[...document.querySelectorAll("#"+id+" input:checked")].map(i=>i.value).filter(v=>v);
+function customVals(id){ const f=$(id+"_other"); return (f&&!f.hidden&&f.value)?f.value.split(',').map(s=>s.trim()).filter(Boolean):[]; }
+
+function buildPrefs(){
+  const a=$("anchor").value.split(",").map(Number);
+  const note=$("freeText").value;
+  const {add,detected}=parseNote(note);
+  const prefs={
+    weights:{cost:+sliders[0].value, location:+sliders[1].value, living:+sliders[2].value},
+    budget:+$("budget").value, anchor:a, commute_days:+$("commute_days").value, people:+$("people").value,
+    city:$("city").value.trim(), stay:$("stay").value, anchorText:$("anchor_text").value.trim(),
+    maxCommute:+$("max_commute").value, movein:$("movein").value,
+    furnish:(document.querySelector('input[name=furnish]:checked')||{}).value || 'furnished',
+    needs:checked("needs"),
+    nearby:[...new Set([...checked("nearby"), ...add.near])],
+    vibe:(document.querySelector('input[name=vibe]:checked')||{}).value || add.vibe || null,
+    types:checked("types"),
+    amenities:[...new Set([...checked("amenities"), ...add.amen])],
+    customNearby:customVals("nearby"), customTypes:customVals("types"), customAmenities:customVals("amenities"),
+    note, detected
+  };
+  // soft weight nudges from the note (kept within 0-10)
+  prefs.weights.cost=clamp(prefs.weights.cost+add.wcost,0,10);
+  prefs.weights.location=clamp(prefs.weights.location+add.wloc,0,10);
+  prefs.weights.living=clamp(prefs.weights.living+add.wliv,0,10);
+  return prefs;
+}
+
+/* =============================== RENDER MATCHES =============================== */
+const saved=new Set();
+let lastResults=[], lastPrefs=null;
+const fmt=n=>n.toLocaleString(), fmtK=n=>Math.round(n/1000)+"k";
+const commuteLevel=e=>e<=600?"low":e<=2000?"moderate":"high";
+
+function cardHTML(r,i,isTop){
+  const lvl=commuteLevel(r.commuteCost);
+  const lvlText={low:"Cheap commute",moderate:"Moderate commute",high:"Costly commute"}[lvl];
+  const approve=isTop?'<span class="pill-approve">⭐ Approved by Sift</span>':(r.score>=85?'<span class="pill-approve">👍 Great fit</span>':'<span></span>');
+  const metTags=r.met.map(m=>`<span class="tag2 met">📍 ${m.replace("_"," ")}</span>`).join("");
+  const vibeTag=`<span class="tag2">${r.vibe==="quiet"?"🌿 quiet street":"✨ lively"}</span>`;
+  const amenTags=r.matchedAmenities.map(a=>`<span class="tag2">${a}</span>`).join("");
+  const rev=r.reviews[0]?`<p class="review">"${r.reviews[0].text}"<span class="stars">${"★".repeat(r.reviews[0].stars)}</span></p>`:"";
+  const on=saved.has(r.name)?"on":"";
+  return `<article class="match ${isTop?"top":""}">
+    <div class="photo" style="background:${r.photo}">
+      <div class="pills"><span class="pill-dark">★ ${r.score}% Match</span>${approve}</div>
+      <button class="heart ${on}" data-name="${r.name}" aria-label="Save">${on?"❤️":"🤍"}</button>
+    </div>
+    <div class="body">
+      <h3>${r.name}</h3>
+      <div class="area">📍 ${r.area} · ${r.type} · ~${r.commuteMin} min to your place</div>
+      <div class="price"><b>${fmt(r.rent)}</b> /month rent</div>
+      <div class="commute">
+        <div class="top"><span>True monthly cost</span><span class="lvl ${lvl}">${lvlText}</span></div>
+        <div class="big">${fmt(r.trueCost)} <span style="font-size:13px;color:var(--on-variant)">/mo all-in</span></div>
+        <div class="sub">${fmt(r.rent)} rent + ~${fmt(r.commuteCost)} estimated commute</div>
+      </div>
+      <div class="tags">${vibeTag}${metTags}${amenTags}</div>${rev}
+      <button class="view" onclick="alert('Prototype — opens the full listing + map verification.')">View house details</button>
+    </div></article>`;
+}
+function wireHearts(scope){
+  scope.querySelectorAll('.heart').forEach(h=>h.onclick=()=>{
+    const n=h.dataset.name; saved.has(n)?saved.delete(n):saved.add(n);
+    updateSavedBadge(); renderMatches(); renderSaved();
+  });
+}
+function updateSavedBadge(){ const d=$("savedDot"); d.textContent=saved.size; d.classList.toggle("show",saved.size>0); }
+
+function renderMatches(){
+  const box=$("matches"); box.innerHTML=lastResults.map((r,i)=>cardHTML(r,i,i===0)).join("");
+  wireHearts(box);
+}
+function renderSaved(){
+  const box=$("savedList");
+  const items=lastResults.filter(r=>saved.has(r.name));
+  if(!items.length){ box.innerHTML=`<div class="empty"><div class="av">🐤</div><h3>No saved places yet</h3><p>Tap 🤍 on a match and it'll wait for you here.</p></div>`; return; }
+  box.innerHTML=items.map(r=>cardHTML(r,0,false)).join(""); wireHearts(box);
+}
+function renderAreas(){
+  $("areasList").innerHTML=AREAS.map(a=>`
+    <div class="area-card">
+      <div class="emoji">${a.emoji}</div>
+      <div style="flex:1">
+        <h3>${a.name}</h3><div class="meta">${a.vibe} · ${a.good}</div>
+        <div class="row2"><span class="mini s">🛡️ Safety ${a.safety}/10</span><span class="mini">Avg ${fmtK(a.rent)}/mo</span></div>
+      </div>
+    </div>`).join("");
+}
+function renderGuide(){
+  $("guideList").innerHTML=GUIDE.map(g=>`
+    <details class="guide-card">
+      <summary><span class="ic">${g.ic}</span>${g.q}<span class="chev">▾</span></summary>
+      <p>${g.a}</p>
+    </details>`).join("");
+}
+
+function renderResults(prefs){
+  lastPrefs=prefs; lastResults=rank(LISTINGS,prefs);
+  renderMatches();
+  const top=lastResults[0];
+  const anchorName=document.querySelector("#anchor option:checked").textContent;
+  const dest=prefs.anchorText || anchorName;
+  const cityTxt=prefs.city?` in <b>${prefs.city}</b>`:"";
+  const ppl=prefs.people>1?` · for ${prefs.people} people`:"";
+  const base=`Near <b>${dest}</b>${cityTxt}, within <b>${fmt(prefs.budget)}</b>/mo${ppl}.`;
+  let note="";
+  if(prefs.geoFailed){
+    note=`<br><span style="color:var(--secondary)">⚠ Couldn't locate "${prefs.anchorText}" — used the test anchor instead.</span>`;
+  } else if(prefs.geocoded){
+    const farKm=haversineM(prefs.anchor[0],prefs.anchor[1],13.75,100.52)/1000;
+    if(farKm>50) note=`<br><span style="color:var(--secondary)">📍 Located in ${prefs.city||'your city'} — but the demo listings are around Bangkok. Connect real listings to search here.</span>`;
+  }
+  $("ctx").innerHTML=base+note;
+  $("m-safe").innerHTML=(top.safety*2).toFixed(1)+"<small>/10</small>";
+  $("m-rent").textContent=fmtK(Math.round(lastResults.reduce((a,r)=>a+r.rent,0)/lastResults.length));
+  $("m-bus").textContent="~"+Math.max(3,Math.round(top.commuteMin/4))+" min";
+  $("insight-quote").textContent=`"${top.name} scores ${top.score}% for you — ${top.vibe==="quiet"?"a calm street":"a lively street"} ~${top.commuteMin} min from your place. Its true cost ${top.commuteCost<=600?"barely moves":"climbs"} once you add the commute, which most newcomers forget to check."`;
+  // smart banner from the note
+  const det=[...new Set([...prefs.detected, ...prefs.customNearby, ...prefs.customAmenities, ...prefs.customTypes])];
+  const banner=$("smartBanner");
+  if(det.length){ banner.hidden=false; $("smartTags").innerHTML=det.map(d=>`<span class="tag">${d}</span>`).join(""); }
+  else banner.hidden=true;
+}
+
+/* =============================== NAVIGATION / TABS =============================== */
+const PANELS=["matches","saved","areas","guide"];
+const TITLES={matches:"Your best matches",saved:"Saved places",areas:"Explore areas",guide:"Rent safely"};
+let areasReady=false, guideReady=false;
+function setTab(tab){
+  PANELS.forEach(p=>$("panel-"+p).hidden = p!==tab);
+  document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active', b.dataset.tab===tab));
+  $("appTitle").textContent=TITLES[tab];
+  $("appAction").style.visibility = tab==="matches" ? "visible" : "hidden";
+  if(tab==="areas" && !areasReady){ renderAreas(); areasReady=true; }
+  if(tab==="guide" && !guideReady){ renderGuide(); guideReady=true; }
+  document.querySelector('.phone').scrollTop=0; window.scrollTo(0,0);
+}
+document.querySelectorAll('.nav button').forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+function goEdit(){ $("app").hidden=true; $("intake").hidden=false; window.scrollTo(0,0); }
+$("appBack").onclick=goEdit;
+
+$("go").onclick=async ()=>{
+  if(refresh()>20){ alert("Your three priorities add up to more than 20. Ease one down to 20 or less — that's what makes the trade-off meaningful."); return; }
+  const prefs=buildPrefs();                 // anchor defaults to the dev dropdown
+  const typed=$("anchor_text").value.trim();
+  if(typed){
+    const btn=$("go"), orig=btn.textContent;
+    btn.textContent="Locating…"; btn.disabled=true;
+    const geo=await geocode(typed + (prefs.city ? (", "+prefs.city) : ""));   // real coordinates
+    btn.textContent=orig; btn.disabled=false;
+    if(geo){ prefs.anchor=[geo.lat, geo.lon]; prefs.geocoded=true; prefs.anchorText=typed; }
+    else { prefs.geoFailed=true; }
+  }
+  renderResults(prefs); renderSaved(); updateSavedBadge();
+  $("intake").hidden=true; $("app").hidden=false; setTab("matches");
+};
+
+refresh();
+</script>
+</body>
+</html>
