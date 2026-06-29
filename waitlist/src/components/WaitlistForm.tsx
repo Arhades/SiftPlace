@@ -1,15 +1,24 @@
 import { supabase } from '../lib/supabaseClient'
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ArrowRight, CheckCircle2, Loader2, Mail, Building, Clock, Shield, Users, Search, HelpCircle } from "lucide-react";
-import { getUniversityFromEmail, getFlagEmoji } from "@/lib/utils";
-import { UNIVERSITY_PRESETS } from "@/lib/universities";
+import { ArrowRight, CheckCircle2, Loader2, Mail, Building, Clock, Shield, Users, Search, HelpCircle, MapPin } from "lucide-react";
+import { getUniversityFromEmail } from "@/lib/utils";
+import { UNIVERSITY_PRESETS, loadUniversities, searchUniversities, type UniversityPreset } from "@/lib/universities";
+import { loadCities, searchCities, type CityEntry } from "@/lib/cities";
 
 interface SurveyData {
   city: string;
   painPoint: string;
   deskNeeded: string;
 }
+
+// One-tap quick picks shown above the full searchable world-city directory.
+const FEATURED_CITIES = [
+  { city: "Bangkok", flag: "🇹🇭", label: "Bangkok, Thailand" },
+  { city: "Tokyo", flag: "🇯🇵", label: "Tokyo, Japan" },
+  { city: "Seoul", flag: "🇰🇷", label: "Seoul, Republic of Korea" },
+  { city: "Singapore", flag: "🇸🇬", label: "Singapore, Singapore" },
+];
 
 const COUNTRIES = [
   { name: "United States", code: "US", flag: "🇺🇸" },
@@ -47,16 +56,63 @@ export function WaitlistForm() {
   // University search and custom entry states
   const [selectedUni, setSelectedUni] = useState("");
   const [uniSearch, setUniSearch] = useState("");
-  const [uniResults, setUniResults] = useState<any[]>([]);
+  const [uniResults, setUniResults] = useState<UniversityPreset[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [customUni, setCustomUni] = useState("");
   const [customCountryFlag, setCustomCountryFlag] = useState("🌐");
+
+  // Cached global directories (fetched once, then filtered locally for instant search)
+  const [allUnis, setAllUnis] = useState<UniversityPreset[]>([]);
+  const [allCities, setAllCities] = useState<CityEntry[]>([]);
+
+  // City search states
+  const [citySearch, setCitySearch] = useState("");
+  const [cityResults, setCityResults] = useState<CityEntry[]>([]);
+  const [citiesLoading, setCitiesLoading] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<{ label: string; flag: string } | null>(null);
+
+  // Step 3 "Other" pain point states
+  const [isOtherPain, setIsOtherPain] = useState(false);
+  const [customPain, setCustomPain] = useState("");
 
   const [survey, setSurvey] = useState<SurveyData>({
     city: "",
     painPoint: "",
     deskNeeded: "",
   });
+
+  // Warm the global directories once so the search boxes respond instantly.
+  // Universities first (needed on step 1), then cities (needed on step 2).
+  useEffect(() => {
+    let active = true;
+    loadUniversities()
+      .then((list) => { if (active) setAllUnis(list); })
+      .catch((err) => console.warn("University directory load failed, using presets:", err));
+
+    setCitiesLoading(true);
+    loadCities()
+      .then((list) => { if (active) setAllCities(list); })
+      .catch((err) => console.warn("City directory load failed:", err))
+      .finally(() => { if (active) setCitiesLoading(false); });
+
+    return () => { active = false; };
+  }, []);
+
+  // Re-run the active university query once the full directory finishes loading.
+  useEffect(() => {
+    if (allUnis.length && uniSearch.trim().length >= 2) {
+      setUniResults(searchUniversities(allUnis, uniSearch, 8));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allUnis]);
+
+  // Re-run the active city query once the full directory finishes loading.
+  useEffect(() => {
+    if (allCities.length && citySearch.trim().length >= 2) {
+      setCityResults(searchCities(allCities, citySearch, 8));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allCities]);
 
   const validateEmail = (val: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
@@ -93,44 +149,18 @@ export function WaitlistForm() {
     setStep("uni");
   };
 
-  // Dynamic lookup from global university directory, falling back to local dataset
-  const handleUniSearchChange = async (val: string) => {
+  // Instant local lookup against the cached global directory. While the full
+  // directory is still downloading, fall back to the bundled presets so the box
+  // is never blocked on the network.
+  const handleUniSearchChange = (val: string) => {
     setUniSearch(val);
     if (val.trim().length < 2) {
       setUniResults([]);
       return;
     }
-    
-    setIsSearching(true);
-    try {
-      const res = await fetch(`https://universities.hipolabs.com/search?name=${encodeURIComponent(val)}`);
-      if (!res.ok) throw new Error("API Network Response error");
-      const data = await res.json();
-      
-      const seen = new Set();
-      const unique = data.filter((item: any) => {
-        const k = `${item.name}-${item.alpha_two_code}`;
-        if (seen.has(k)) return false;
-        seen.add(k);
-        return true;
-      });
-
-      const mapped = unique.map((item: any) => ({
-        name: item.name,
-        flag: getFlagEmoji(item.alpha_two_code),
-        country: item.country
-      }));
-      setUniResults(mapped.slice(0, 8));
-    } catch (err) {
-      console.warn("Global API lookup failed, falling back to pre-compiled presets:", err);
-      const filtered = UNIVERSITY_PRESETS.filter(item => 
-        item.name.toLowerCase().includes(val.toLowerCase()) || 
-        item.country.toLowerCase().includes(val.toLowerCase())
-      );
-      setUniResults(filtered.slice(0, 8));
-    } finally {
-      setIsSearching(false);
-    }
+    const source = allUnis.length ? allUnis : UNIVERSITY_PRESETS;
+    setIsSearching(allUnis.length === 0);
+    setUniResults(searchUniversities(source, val, 8));
   };
 
   const selectPresetUniversity = (name: string, flag: string) => {
@@ -152,6 +182,28 @@ export function WaitlistForm() {
     e.preventDefault();
     if (!selectedUni) return;
     setStep("city");
+  };
+
+  // Instant local search across the cached world-city directory.
+  const handleCitySearchChange = (val: string) => {
+    setCitySearch(val);
+    if (val.trim().length < 2) {
+      setCityResults([]);
+      return;
+    }
+    setCityResults(searchCities(allCities, val, 8));
+  };
+
+  const selectCity = (label: string, flag: string) => {
+    setSelectedCity({ label, flag });
+    setSurvey((s) => ({ ...s, city: label }));
+    setCityResults([]);
+    setCitySearch("");
+  };
+
+  const clearSelectedCity = () => {
+    setSelectedCity(null);
+    setSurvey((s) => ({ ...s, city: "" }));
   };
 
   const handleCitySubmit = (e: React.FormEvent) => {
@@ -193,6 +245,7 @@ export function WaitlistForm() {
       return item;
     });
     localStorage.setItem("siftplace_waitlist", JSON.stringify(updatedList));
+    await supabase.from('waitlist_signups').insert({ <div styleName={styles.registrationID}></div> })
 
     setIsLoading(false);
     setStep("success");
@@ -440,43 +493,95 @@ export function WaitlistForm() {
                 Which city are you heading to?
               </h3>
               <p className="text-xs text-white/50">
-                SiftPlace is launching in Bangkok, with expansion plans soon.
+                Pick a launch city, or search any city in the world.
               </p>
             </div>
 
             <form onSubmit={handleCitySubmit} className="space-y-4">
+              {/* Quick-pick launch cities */}
               <div className="grid grid-cols-2 gap-2">
-                {[
-                  { code: "BKK", name: "Bangkok 🇹🇭" },
-                  { code: "TYO", name: "Tokyo 🇯🇵" },
-                  { code: "SEL", name: "Seoul 🇰🇷" },
-                  { code: "SIN", name: "Singapore 🇸🇬" },
-                ].map((cityOpt) => (
+                {FEATURED_CITIES.map((cityOpt) => (
                   <button
-                    key={cityOpt.code}
+                    key={cityOpt.label}
                     type="button"
-                    onClick={() => setSurvey({ ...survey, city: cityOpt.name })}
+                    onClick={() => selectCity(cityOpt.label, cityOpt.flag)}
                     className={`py-2.5 px-3 text-left text-xs rounded-xl border transition-all cursor-pointer ${
-                      survey.city === cityOpt.name
+                      survey.city === cityOpt.label
                         ? "bg-indigo-500/25 border-indigo-500 text-white font-medium"
                         : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
                     }`}
                   >
-                    {cityOpt.name}
+                    {cityOpt.flag} {cityOpt.city}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  onClick={() => setSurvey({ ...survey, city: "Other" })}
-                  className={`col-span-2 py-2.5 px-3 text-center text-xs rounded-xl border transition-all cursor-pointer ${
-                    survey.city === "Other"
-                      ? "bg-indigo-500/25 border-indigo-500 text-white font-medium"
-                      : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
-                  }`}
-                >
-                  Other Destination City
-                </button>
               </div>
+
+              {/* Selected city or full world-city search */}
+              {selectedCity && survey.city === selectedCity.label ? (
+                <div className="p-4 bg-white/[0.03] border border-white/[0.08] rounded-xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xl flex-shrink-0">{selectedCity.flag}</span>
+                    <span className="text-sm font-medium text-white truncate">{selectedCity.label}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={clearSelectedCity}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2 relative">
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-white/30">
+                      <Search className="h-4 w-4" />
+                    </span>
+                    <input
+                      type="text"
+                      placeholder="Or search any city worldwide (e.g. Berlin, Osaka...)"
+                      value={citySearch}
+                      onChange={(e) => handleCitySearchChange(e.target.value)}
+                      className="w-full pl-9 pr-10 py-2.5 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-xs"
+                    />
+                    {citiesLoading && (
+                      <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40" />
+                      </span>
+                    )}
+                  </div>
+
+                  {citySearch.trim().length >= 2 && (
+                    <div className="bg-[#0b0b0b] border border-white/[0.1] rounded-xl overflow-hidden shadow-2xl max-h-[180px] overflow-y-auto z-50 text-left">
+                      {cityResults.map((item) => (
+                        <button
+                          key={item.label}
+                          type="button"
+                          onClick={() => selectCity(item.label, item.flag)}
+                          className="w-full py-2.5 px-3 hover:bg-white/[0.05] text-white/80 text-left text-xs transition border-b border-white/[0.03] last:border-0 cursor-pointer flex items-center gap-2 truncate"
+                        >
+                          <span>{item.flag}</span>
+                          <span className="truncate">{item.city}</span>
+                          <span className="text-white/30 truncate">· {item.country}</span>
+                        </button>
+                      ))}
+                      {cityResults.length === 0 && (
+                        <div className="py-3 px-4 text-xs text-white/40 text-center">
+                          {citiesLoading ? "Loading world cities…" : "No match found."}
+                        </div>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => selectCity(citySearch.trim(), "🌐")}
+                        className="w-full py-2.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-300 text-left text-xs font-semibold flex items-center gap-2 cursor-pointer border-t border-white/[0.05]"
+                      >
+                        <MapPin className="h-3.5 w-3.5" />
+                        Use "{citySearch.trim()}"
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="flex gap-3 pt-2">
                 <button
@@ -529,13 +634,17 @@ export function WaitlistForm() {
                     { id: "safety", label: "Flooding, neighborhood safety, scams", icon: Shield },
                   ].map((opt) => {
                     const Icon = opt.icon;
+                    const active = !isOtherPain && survey.painPoint === opt.label;
                     return (
                       <button
                         key={opt.id}
                         type="button"
-                        onClick={() => setSurvey({ ...survey, painPoint: opt.label })}
+                        onClick={() => {
+                          setIsOtherPain(false);
+                          setSurvey({ ...survey, painPoint: opt.label });
+                        }}
                         className={`w-full py-2.5 px-3 flex items-center gap-2.5 text-left text-xs rounded-xl border transition-all cursor-pointer ${
-                          survey.painPoint === opt.label
+                          active
                             ? "bg-rose-500/25 border-rose-500 text-white font-medium"
                             : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
                         }`}
@@ -545,6 +654,39 @@ export function WaitlistForm() {
                       </button>
                     );
                   })}
+
+                  {/* Other (free text) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsOtherPain(true);
+                      setSurvey({ ...survey, painPoint: customPain.trim() });
+                    }}
+                    className={`w-full py-2.5 px-3 flex items-center gap-2.5 text-left text-xs rounded-xl border transition-all cursor-pointer ${
+                      isOtherPain
+                        ? "bg-rose-500/25 border-rose-500 text-white font-medium"
+                        : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
+                    }`}
+                  >
+                    <HelpCircle className="h-4 w-4 text-white/40 flex-shrink-0" />
+                    <span>Other</span>
+                  </button>
+
+                  {isOtherPain && (
+                    <motion.input
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      type="text"
+                      autoFocus
+                      placeholder="Tell us your biggest worry..."
+                      value={customPain}
+                      onChange={(e) => {
+                        setCustomPain(e.target.value);
+                        setSurvey({ ...survey, painPoint: e.target.value.trim() });
+                      }}
+                      className="w-full py-2.5 px-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs"
+                    />
+                  )}
                 </div>
               </div>
 

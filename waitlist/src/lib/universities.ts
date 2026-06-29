@@ -1,7 +1,70 @@
+import { getFlagEmoji } from "@/lib/utils";
+
 export interface UniversityPreset {
   name: string;
   flag: string;
   country: string;
+}
+
+// Full global university directory (~10k schools, ~2.2MB).
+// Source: Hipo/university-domains-list. Loaded once and cached in memory, then
+// filtered locally so the search box responds instantly (no per-keystroke fetch).
+const UNIVERSITIES_URL =
+  "https://cdn.jsdelivr.net/gh/Hipo/university-domains-list@master/world_universities_and_domains.json";
+
+let universitiesPromise: Promise<UniversityPreset[]> | null = null;
+
+export function loadUniversities(): Promise<UniversityPreset[]> {
+  if (!universitiesPromise) {
+    universitiesPromise = fetch(UNIVERSITIES_URL)
+      .then((res) => {
+        if (!res.ok) throw new Error("University directory fetch failed");
+        return res.json();
+      })
+      .then((data: any[]) => {
+        const seen = new Set<string>();
+        const out: UniversityPreset[] = [];
+        for (const item of data) {
+          const name: string = item.name;
+          const country: string = item.country || "";
+          const key = `${name}|${item.alpha_two_code}`;
+          if (!name || seen.has(key)) continue;
+          seen.add(key);
+          out.push({ name, country, flag: getFlagEmoji(item.alpha_two_code) });
+        }
+        return out;
+      })
+      .catch((err) => {
+        universitiesPromise = null;
+        throw err;
+      });
+  }
+  return universitiesPromise;
+}
+
+// Local substring search, prefix matches first, matching name or country.
+export function searchUniversities(
+  list: UniversityPreset[],
+  query: string,
+  limit = 8
+): UniversityPreset[] {
+  const q = query.trim().toLowerCase();
+  if (q.length < 2) return [];
+  const starts: UniversityPreset[] = [];
+  const contains: UniversityPreset[] = [];
+  for (const entry of list) {
+    const name = entry.name.toLowerCase();
+    if (name.startsWith(q)) {
+      starts.push(entry);
+      if (starts.length >= limit) break;
+    } else if (
+      contains.length < limit &&
+      (name.includes(q) || entry.country.toLowerCase().includes(q))
+    ) {
+      contains.push(entry);
+    }
+  }
+  return [...starts, ...contains].slice(0, limit);
 }
 
 export const UNIVERSITY_PRESETS: UniversityPreset[] = [
