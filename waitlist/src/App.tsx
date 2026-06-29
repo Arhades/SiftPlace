@@ -8,7 +8,7 @@ function App() {
   const [registrations, setRegistrations] = useState<any[]>([]);
   const [showAdmin, setShowAdmin] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
-  
+
   // Founders Portal security states
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
   const [adminPasswordInput, setAdminPasswordInput] = useState("");
@@ -31,7 +31,7 @@ function App() {
     if (!localStorage.getItem("siftplace_waitlist")) {
       localStorage.setItem("siftplace_waitlist", JSON.stringify([]));
     }
-    
+
     // Set initial registrations state
     setRegistrations(JSON.parse(localStorage.getItem("siftplace_waitlist") || "[]"));
 
@@ -48,7 +48,7 @@ function App() {
 
   const getLeaderboardData = () => {
     const counts: Record<string, { count: number; flag: string }> = {};
-    
+
     registrations.forEach((reg) => {
       if (reg.universityName) {
         if (!counts[reg.universityName]) {
@@ -93,9 +93,9 @@ function App() {
       reg.timestamp || ""
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," 
+    const csvContent = "data:text/csv;charset=utf-8,"
       + [headers.join(","), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(","))].join("\n");
-    
+
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
     link.setAttribute("href", encodedUri);
@@ -143,6 +143,7 @@ function App() {
         <nav className="hidden md:flex items-center gap-6 text-xs text-white/50 font-medium">
           <a href="#how-it-works" className="hover:text-white transition duration-200">How it Works</a>
           <a href="#features" className="hover:text-white transition duration-200">Features</a>
+          <a href="#demo" className="hover:text-white transition duration-200">Demo</a>
           <a href="#free-forever" className="hover:text-white transition duration-200">Pricing</a>
           <a href="#faq" className="hover:text-white transition duration-200">FAQ</a>
         </nav>
@@ -293,6 +294,33 @@ function App() {
         </div>
       </section>
 
+      {/* Section: Product Demo */}
+      <section id="demo" className="py-24 bg-[#030303] border-t border-white/[0.05] relative z-20">
+        <div className="max-w-3xl mx-auto px-6">
+          <div className="bg-gradient-to-tr from-indigo-500/5 via-white/[0.01] to-rose-500/5 border border-white/[0.08] rounded-3xl p-8 sm:p-12 text-center relative overflow-hidden shadow-2xl">
+            <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 rounded-full text-indigo-400 mb-4 border border-indigo-500/10">
+              <Sparkles className="h-6 w-6" />
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-white tracking-tight mb-4">
+              Curious about our product? Here is a simple demo!
+            </h2>
+            <p className="text-sm text-white/50 max-w-xl mx-auto leading-relaxed mb-8">
+              Take our interactive prototype for a spin — set your priorities and watch SiftPlace match you to the right place to live.
+            </p>
+            <a
+              href="/prototype.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-8 py-3.5 bg-white text-black hover:bg-white/90 font-semibold text-sm rounded-full transition duration-200 cursor-pointer shadow-lg active:scale-[0.98]"
+            >
+              <Sparkles className="h-4 w-4" />
+              Try the Live Demo
+              <ArrowRight className="h-4 w-4" />
+            </a>
+          </div>
+        </div>
+      </section>
+
       {/* Section: FAQ */}
       <section id="faq" className="py-24 bg-[#030303] border-t border-white/[0.05] relative z-20">
         <div className="max-w-3xl mx-auto px-6">
@@ -304,8 +332,8 @@ function App() {
 
           <div className="space-y-4">
             {faqs.map((faq, index) => (
-              <div 
-                key={index} 
+              <div
+                key={index}
                 className="bg-white/[0.01] border border-white/[0.06] rounded-xl overflow-hidden transition duration-300"
               >
                 <button
@@ -348,8 +376,8 @@ function App() {
               <p className="text-center text-white/40 text-xs py-8 font-light italic">No university cohorts registered yet. Be the first from your school to join the queue!</p>
             ) : (
               leaderboard.map((uni) => (
-                <div 
-                  key={uni.rank} 
+                <div
+                  key={uni.rank}
                   className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-white/[0.01] hover:bg-white/[0.03] border border-white/[0.03] hover:border-white/[0.08] transition duration-200"
                 >
                   <div className="flex items-center gap-3">
@@ -390,7 +418,7 @@ function App() {
       {/* SiftPlace Footer */}
       <footer className="py-12 border-t border-white/[0.05] bg-[#030303] text-center text-xs text-white/30 relative z-20 flex flex-col items-center gap-4">
         <p>&copy; {new Date().getFullYear()} SiftPlace. Built for exchange students by exchange students.</p>
-        
+
         {/* Founders Access Portal Trigger */}
         <button
           onClick={() => setShowAdmin(true)}
@@ -418,7 +446,7 @@ function App() {
                 >
                   <X className="h-5 w-5" />
                 </button>
-                
+
                 <div className="text-center mb-6">
                   <div className="inline-flex items-center justify-center p-3 bg-indigo-500/10 rounded-full text-indigo-400 mb-4 border border-indigo-500/10">
                     <Database className="h-6 w-6" />
@@ -428,7 +456,7 @@ function App() {
                     Enter the founders access code to view and export the current waitlist registrations.
                   </p>
                 </div>
-                
+
                 <form onSubmit={handleAdminLogin} className="space-y-4">
                   <div>
                     <input
