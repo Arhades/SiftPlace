@@ -1,8 +1,6 @@
 import { supabase } from '../lib/supabaseClient'
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, CheckCircle2, Loader2, Mail, Building, Clock, Shield, Users, Search, HelpCircle } from "lucide-react";
 import { getUniversityFromEmail, getFlagEmoji } from "@/lib/utils";
 import { UNIVERSITY_PRESETS } from "@/lib/universities";
