@@ -245,7 +245,6 @@ export function WaitlistForm() {
       return item;
     });
     localStorage.setItem("siftplace_waitlist", JSON.stringify(updatedList));
-    await supabase.from('waitlist_signups').insert({ <div styleName={styles.registrationID}></div> })
 
     setIsLoading(false);
     setStep("success");
