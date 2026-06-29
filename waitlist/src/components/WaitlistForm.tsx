@@ -49,9 +49,14 @@ const COUNTRIES = [
 
 export function WaitlistForm() {
   const [email, setEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [step, setStep] = useState<"email" | "uni" | "city" | "prefs" | "success">("email");
   const [isLoading, setIsLoading] = useState(false);
-  const [registrationId, setRegistrationId] = useState<string | null>(null);
+  const [rowId, setRowId] = useState<string | null>(null);
+
+  // Global signup counts pulled from Supabase (shared across all visitors, live)
+  const [waitlistCount, setWaitlistCount] = useState(0);
+  const [joinedPosition, setJoinedPosition] = useState(0);
   
   // University search and custom entry states
   const [selectedUni, setSelectedUni] = useState("");
@@ -114,36 +119,78 @@ export function WaitlistForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allCities]);
 
+  // Keep the live signup counter (header + progress bar) in sync with Supabase.
+  const refreshCount = async () => {
+    const { data, error } = await supabase.rpc("get_waitlist_count");
+    if (!error && data != null) setWaitlistCount(Number(data));
+  };
+  useEffect(() => {
+    refreshCount();
+    const t = setInterval(refreshCount, 5000);
+    return () => clearInterval(t);
+  }, []);
+
   const validateEmail = (val: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
   };
 
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateEmail(email)) return;
-
-    setIsLoading(true);
-    // Simulate API request to capture email first
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    
-    const regId = Math.random().toString(36).substring(2, 9).toUpperCase();
-    setRegistrationId(regId);
-
-    // Initial email capture guestimate
-    const uniInfo = getUniversityFromEmail(email);
-    
-    // Save email to Supabase
-    const { error } = await supabase
-      .from('waitlist')
-      .insert([{ email: email, university: uniInfo.name }])
-
-    if (error) {
-      console.error('Supabase error:', error)
+    setEmailError("");
+    if (!validateEmail(email)) {
+      setEmailError("Please enter a valid email address.");
+      return;
     }
 
-    // Seed defaults in search
-    setUniSearch(uniInfo.name);
-    handleUniSearchChange(uniInfo.name);
+    setIsLoading(true);
+
+    // Store one canonical form so "A@x.com" and "a@x.com" are treated as the same person.
+    const normalizedEmail = email.trim().toLowerCase();
+    const uniInfo = getUniversityFromEmail(normalizedEmail);
+    // Only trust the email-domain guess when it maps to a known school (real flag).
+    // Generic providers (gmail, etc.) return a placeholder like "Gmail Uni" + 🌐 —
+    // we don't store or pre-fill those.
+    const recognizedUni = uniInfo.flag !== "🌐";
+
+    // Insert into Supabase. A UNIQUE constraint on the email column enforces
+    // de-duplication at the database level (race-proof), returning Postgres
+    // error 23505 on a repeat — we surface that as a friendly message.
+    // The id is generated client-side so we can attach survey answers later
+    // without needing read access to the (privacy-protected) table.
+    const newId = crypto.randomUUID();
+    const { error } = await supabase
+      .from("waitlist")
+      .insert([{
+        id: newId,
+        email: normalizedEmail,
+        university: recognizedUni ? uniInfo.name : null,
+        university_flag: recognizedUni ? uniInfo.flag : null,
+      }]);
+
+    if (error) {
+      setIsLoading(false);
+      if (error.code === "23505") {
+        setEmailError("This email is already registered on the waitlist.");
+      } else {
+        console.error("Supabase error:", error);
+        setEmailError("Something went wrong saving your spot. Please try again.");
+      }
+      return;
+    }
+
+    setRowId(newId);
+
+    // Pull the live total so the success screen shows a real global position.
+    const { data: countData } = await supabase.rpc("get_waitlist_count");
+    const total = countData != null ? Number(countData) : waitlistCount + 1;
+    setWaitlistCount(total);
+    setJoinedPosition(total);
+
+    // Pre-fill the university search only when we recognised the school.
+    if (recognizedUni) {
+      setUniSearch(uniInfo.name);
+      handleUniSearchChange(uniInfo.name);
+    }
 
     setIsLoading(false);
     setStep("uni");
@@ -212,49 +259,49 @@ export function WaitlistForm() {
     setStep("prefs");
   };
 
+  // Resolve the final university name + flag from the selection state.
+  const resolveUniversity = () => {
+    if (selectedUni === "Other") {
+      return {
+        name: customUni.trim() || "Other University",
+        flag: customCountryFlag.trim() || "🌐",
+      };
+    }
+    return { name: selectedUni, flag: customCountryFlag };
+  };
+
+  // Attach the chosen university + survey answers to the existing Supabase row.
+  // Uses a security-definer RPC so we never need broad update access to the table.
+  const persistSurvey = async (overrides?: Partial<SurveyData>) => {
+    if (!rowId) return;
+    const uni = resolveUniversity();
+    const answers = { ...survey, ...overrides };
+    const { error } = await supabase.rpc("submit_survey", {
+      p_id: rowId,
+      p_university: uni.name,
+      p_university_flag: uni.flag,
+      p_city: answers.city,
+      p_pain_point: answers.painPoint,
+      p_desk_needed: answers.deskNeeded,
+    });
+    if (error) console.error("Failed to save survey answers:", error);
+  };
+
   const handleSurveySubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    
-    // Simulate API request to save survey answers
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // Determine final university details
-    let finalUniName = "";
-    let finalUniFlag = "🌐";
-
-    if (selectedUni === "Other") {
-      finalUniName = customUni.trim() || "Other University";
-      finalUniFlag = customCountryFlag.trim() || "🌐";
-    } else {
-      finalUniName = selectedUni;
-      finalUniFlag = customCountryFlag;
-    }
-
-    // Update lead in localStorage with survey answers
-    const currentList = JSON.parse(localStorage.getItem("siftplace_waitlist") || "[]");
-    const updatedList = currentList.map((item: any) => {
-      if (item.id === registrationId) {
-        return {
-          ...item,
-          universityName: finalUniName,
-          universityFlag: finalUniFlag,
-          survey,
-        };
-      }
-      return item;
-    });
-    localStorage.setItem("siftplace_waitlist", JSON.stringify(updatedList));
-
+    await persistSurvey();
     setIsLoading(false);
     setStep("success");
   };
 
-  const skipSurvey = () => {
+  // Skipping still saves the university the student already picked (if any).
+  const skipSurvey = async () => {
+    if (rowId && selectedUni) {
+      await persistSurvey({ city: "", painPoint: "", deskNeeded: "" });
+    }
     setStep("success");
   };
-
-  const queuePosition = JSON.parse(localStorage.getItem("siftplace_waitlist") || "[]").length;
 
   return (
     <div className="w-full max-w-md mx-auto bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 sm:p-8 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
@@ -270,7 +317,7 @@ export function WaitlistForm() {
             <div className="text-center mb-6">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-3">
                 <Users className="h-3.5 w-3.5" />
-                <span>{queuePosition} students in priority queue</span>
+                <span>{waitlistCount} students in priority queue</span>
               </div>
               <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">
                 Join SiftPlace Priority Queue
@@ -283,12 +330,12 @@ export function WaitlistForm() {
               <div className="mt-5 text-left space-y-1.5">
                 <div className="flex justify-between text-[10px] text-white/40 font-medium">
                   <span>Progress to Bangkok Pilot Launch</span>
-                  <span className="text-indigo-300 font-semibold">{queuePosition} / 200 students</span>
+                  <span className="text-indigo-300 font-semibold">{waitlistCount} / 200 students</span>
                 </div>
                 <div className="w-full bg-white/[0.05] rounded-full h-2 overflow-hidden border border-white/[0.03]">
                   <motion.div 
                     initial={{ width: 0 }}
-                    animate={{ width: `${Math.min((queuePosition / 200) * 100, 100)}%` }}
+                    animate={{ width: `${Math.min((waitlistCount / 200) * 100, 100)}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
                     className="bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 h-full rounded-full"
                   />
@@ -306,11 +353,24 @@ export function WaitlistForm() {
                   required
                   placeholder="Enter your university or personal email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError("");
+                  }}
                   disabled={isLoading}
-                  className="w-full pl-10 pr-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/80 transition duration-200 text-sm"
+                  className={`w-full pl-10 pr-4 py-3 bg-white/[0.03] border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition duration-200 text-sm ${
+                    emailError
+                      ? "border-rose-500/60 focus:ring-rose-500/50"
+                      : "border-white/[0.1] focus:ring-indigo-500/50 focus:border-indigo-500/80"
+                  }`}
                 />
               </div>
+
+              {emailError && (
+                <p className="text-rose-400 text-xs text-center font-medium -mt-1">
+                  {emailError}
+                </p>
+              )}
 
               <button
                 type="submit"
@@ -764,7 +824,7 @@ export function WaitlistForm() {
                 Your Queue Position
               </span>
               <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-rose-300">
-                #{queuePosition}
+                #{joinedPosition}
               </span>
             </div>
 

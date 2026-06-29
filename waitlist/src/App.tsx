@@ -2,99 +2,121 @@ import { useEffect, useState } from "react";
 import { HeroGeometric } from "@/components/ui/shape-landing-hero";
 import { WaitlistForm } from "@/components/WaitlistForm";
 import { AnimatePresence } from "framer-motion";
-import { Users, GraduationCap, MapPin, Sparkles, Database, Download, X, HelpCircle, ArrowRight, ShieldCheck, DollarSign } from "lucide-react";
+import { Users, GraduationCap, MapPin, Sparkles, Database, Download, X, HelpCircle, ArrowRight, ShieldCheck, DollarSign, Mail, Lock, LogOut, Loader2 } from "lucide-react";
+import { supabase } from "./lib/supabaseClient";
+import type { Session } from "@supabase/supabase-js";
 
 function App() {
-  const [registrations, setRegistrations] = useState<any[]>([]);
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [showAdmin, setShowAdmin] = useState(false);
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
-  // Founders Portal security states
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState(false);
-  const [adminPasswordInput, setAdminPasswordInput] = useState("");
-  const [adminError, setAdminError] = useState("");
+  // Founders Portal auth (Supabase Auth — password is verified server-side, never shipped to the browser)
+  const [session, setSession] = useState<Session | null>(null);
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // Simple, secure founders access key
-    if (adminPasswordInput === "Jiayous123!") {
-      setIsAdminAuthenticated(true);
-      setAdminError("");
-      setAdminPasswordInput("");
+  // Live waitlist rows pulled from Supabase (only readable by authenticated founders via RLS)
+  const [dbRegistrations, setDbRegistrations] = useState<any[]>([]);
+  const [dbLoading, setDbLoading] = useState(false);
+
+  // Track the founder's auth session
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSession(data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const fetchRegistrations = async () => {
+    setDbLoading(true);
+    const { data, error } = await supabase
+      .from("waitlist")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("Failed to load waitlist:", error);
     } else {
-      setAdminError("Invalid Access Code. Please try again.");
+      setDbRegistrations(data || []);
     }
+    setDbLoading(false);
+  };
+
+  // Load live data whenever an authenticated founder opens the portal
+  useEffect(() => {
+    if (session && showAdmin) {
+      fetchRegistrations();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session, showAdmin]);
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthLoading(true);
+    setAuthError("");
+    const { error } = await supabase.auth.signInWithPassword({
+      email: authEmail.trim(),
+      password: authPassword,
+    });
+    if (error) {
+      setAuthError("Invalid credentials. Please try again.");
+    } else {
+      setAuthPassword("");
+    }
+    setAuthLoading(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setShowAdmin(false);
+  };
+
+  // Live university leaderboard, aggregated globally in Supabase via a
+  // security-definer RPC (returns counts only — never exposes emails).
+  // Polled every few seconds so the board updates in near real-time.
+  const fetchLeaderboard = async () => {
+    const { data, error } = await supabase.rpc("get_leaderboard");
+    if (error) {
+      console.error("Failed to load leaderboard:", error);
+      return;
+    }
+    const mapped = (data || []).map((row: any, index: number) => ({
+      rank: index + 1,
+      name: row.university,
+      flag: row.university_flag || "🌐",
+      count: Number(row.count),
+      trend: index === 0 ? "Hot 🔥" : index < 3 ? "Rising 📈" : "Stable 💤",
+      progress: Math.min((Number(row.count) / 10) * 100, 100),
+    }));
+    setLeaderboard(mapped);
   };
 
   useEffect(() => {
-    // Initialize storage if not present
-    if (!localStorage.getItem("siftplace_waitlist")) {
-      localStorage.setItem("siftplace_waitlist", JSON.stringify([]));
-    }
-
-    // Set initial registrations state
-    setRegistrations(JSON.parse(localStorage.getItem("siftplace_waitlist") || "[]"));
-
-    // Set up a local interval to poll storage changes so the leaderboard refreshes in real-time
-    const interval = setInterval(() => {
-      const current = JSON.parse(localStorage.getItem("siftplace_waitlist") || "[]");
-      setRegistrations(current);
-    }, 1000);
-
-    return () => {
-      clearInterval(interval);
-    };
+    fetchLeaderboard();
+    const interval = setInterval(fetchLeaderboard, 4000);
+    return () => clearInterval(interval);
   }, []);
 
-  const getLeaderboardData = () => {
-    const counts: Record<string, { count: number; flag: string }> = {};
-
-    registrations.forEach((reg) => {
-      if (reg.universityName) {
-        if (!counts[reg.universityName]) {
-          counts[reg.universityName] = { count: 0, flag: reg.universityFlag || "🌐" };
-        }
-        counts[reg.universityName].count += 1;
-      }
-    });
-
-    return Object.entries(counts)
-      .map(([name, info]) => ({
-        name,
-        flag: info.flag,
-        count: info.count,
-      }))
-      .sort((a, b) => b.count - a.count)
-      .map((item, index) => ({
-        rank: index + 1,
-        name: item.name,
-        flag: item.flag,
-        count: item.count,
-        trend: index === 0 ? "Hot 🔥" : index < 3 ? "Rising 📈" : "Stable 💤",
-        progress: Math.min((item.count / 10) * 100, 100),
-      }));
-  };
-
-  const leaderboard = getLeaderboardData();
-
-  // Export local registrations to CSV
+  // Export the live Supabase waitlist to CSV
   const exportToCSV = () => {
-    if (registrations.length === 0) return;
+    if (dbRegistrations.length === 0) return;
 
-    const headers = ["ID", "Email", "University", "Flag", "Destination City", "Pain Point", "Desk Required", "Timestamp"];
-    const rows = registrations.map(reg => [
+    const headers = ["ID", "Email", "University", "Destination City", "Pain Point", "Desk", "Joined"];
+    const rows = dbRegistrations.map(reg => [
       reg.id || "",
       reg.email || "",
-      reg.universityName || "",
-      reg.universityFlag || "",
-      reg.survey?.city || "",
-      reg.survey?.painPoint || "",
-      reg.survey?.deskNeeded || "",
-      reg.timestamp || ""
+      reg.university || "",
+      reg.city || "",
+      reg.pain_point || "",
+      reg.desk_needed || "",
+      reg.created_at || ""
     ]);
 
     const csvContent = "data:text/csv;charset=utf-8,"
-      + [headers.join(","), ...rows.map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(","))].join("\n");
+      + [headers.join(","), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -103,13 +125,6 @@ function App() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-  };
-
-  const clearQueue = () => {
-    if (window.confirm("Are you sure you want to clear all registrations? This cannot be undone.")) {
-      localStorage.setItem("siftplace_waitlist", JSON.stringify([]));
-      setRegistrations([]);
-    }
   };
 
   const faqs = [
@@ -433,14 +448,14 @@ function App() {
       <AnimatePresence>
         {showAdmin && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
-            {!isAdminAuthenticated ? (
-              /* Access Code Challenge Screen */
+            {!session ? (
+              /* Founder Sign-In Screen (Supabase Auth) */
               <div className="bg-[#0b0b0b] border border-white/[0.1] rounded-2xl w-full max-w-md p-6 flex flex-col shadow-[0_24px_50px_rgba(0,0,0,0.8)] relative">
                 <button
                   onClick={() => {
                     setShowAdmin(false);
-                    setAdminError("");
-                    setAdminPasswordInput("");
+                    setAuthError("");
+                    setAuthPassword("");
                   }}
                   className="absolute top-4 right-4 text-white/35 hover:text-white/60 transition p-1 cursor-pointer"
                 >
@@ -453,32 +468,56 @@ function App() {
                   </div>
                   <h3 className="font-semibold text-lg text-white mb-2">Co-Founders Portal</h3>
                   <p className="text-xs text-white/50 leading-relaxed">
-                    Enter the founders access code to view and export the current waitlist registrations.
+                    Sign in with your founder account to view and export the live waitlist.
                   </p>
                 </div>
 
-                <form onSubmit={handleAdminLogin} className="space-y-4">
-                  <div>
+                <form onSubmit={handleAdminLogin} className="space-y-3">
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-white/30">
+                      <Mail className="h-4 w-4" />
+                    </span>
+                    <input
+                      type="email"
+                      required
+                      autoFocus
+                      placeholder="Founder email"
+                      value={authEmail}
+                      onChange={(e) => setAuthEmail(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
+                    />
+                  </div>
+                  <div className="relative">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-white/30">
+                      <Lock className="h-4 w-4" />
+                    </span>
                     <input
                       type="password"
                       required
-                      autoFocus
-                      placeholder="Access Code"
-                      value={adminPasswordInput}
-                      onChange={(e) => setAdminPasswordInput(e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-center text-sm"
+                      placeholder="Password"
+                      value={authPassword}
+                      onChange={(e) => setAuthPassword(e.target.value)}
+                      className="w-full pl-9 pr-4 py-2.5 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-sm"
                     />
-                    {adminError && (
-                      <p className="text-rose-500 text-[10px] mt-1.5 text-center font-medium">
-                        {adminError}
-                      </p>
-                    )}
                   </div>
+                  {authError && (
+                    <p className="text-rose-500 text-[10px] text-center font-medium">
+                      {authError}
+                    </p>
+                  )}
                   <button
                     type="submit"
-                    className="w-full py-2.5 bg-white text-black hover:bg-white/90 text-xs font-semibold rounded-xl transition duration-200 cursor-pointer shadow-lg active:scale-[0.98]"
+                    disabled={authLoading}
+                    className="w-full py-2.5 bg-white text-black hover:bg-white/90 disabled:opacity-50 disabled:cursor-not-allowed text-xs font-semibold rounded-xl transition duration-200 cursor-pointer shadow-lg active:scale-[0.98] flex items-center justify-center gap-1.5"
                   >
-                    Unlock Access
+                    {authLoading ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Signing in...
+                      </>
+                    ) : (
+                      "Sign In"
+                    )}
                   </button>
                 </form>
               </div>
@@ -490,51 +529,62 @@ function App() {
                   <div className="flex items-center gap-2">
                     <Database className="h-5 w-5 text-indigo-400" />
                     <h3 className="font-semibold text-lg text-white">SiftPlace Founders Portal</h3>
-                    <span className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-300 font-medium font-mono">
-                      Authenticated
+                    <span className="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[10px] text-indigo-300 font-medium font-mono truncate max-w-[160px]">
+                      {session.user.email}
                     </span>
                   </div>
-                  <button
-                    onClick={() => {
-                      setShowAdmin(false);
-                      setIsAdminAuthenticated(false);
-                      setAdminError("");
-                    }}
-                    className="text-white/35 hover:text-white/60 transition p-1 cursor-pointer"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handleLogout}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[10px] text-white/50 hover:text-white/80 border border-white/[0.08] hover:bg-white/[0.04] rounded-lg transition cursor-pointer"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Sign out
+                    </button>
+                    <button
+                      onClick={() => setShowAdmin(false)}
+                      className="text-white/35 hover:text-white/60 transition p-1 cursor-pointer"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
 
                 {/* Toolbar */}
                 <div className="px-6 py-3 bg-white/[0.01] border-b border-white/[0.05] flex items-center justify-between text-xs">
                   <span className="text-white/50">
-                    Total Registrations: <strong className="text-white">{registrations.length}</strong>
+                    Total Registrations: <strong className="text-white">{dbRegistrations.length}</strong>
                   </span>
                   <div className="flex gap-2">
                     <button
+                      onClick={fetchRegistrations}
+                      disabled={dbLoading}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/[0.04] hover:bg-white/[0.08] border border-white/[0.08] text-white/70 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition duration-200 cursor-pointer"
+                    >
+                      {dbLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      Refresh
+                    </button>
+                    <button
                       onClick={exportToCSV}
-                      disabled={registrations.length === 0}
+                      disabled={dbRegistrations.length === 0}
                       className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-black hover:bg-white/90 disabled:opacity-40 disabled:cursor-not-allowed font-semibold rounded-lg transition duration-200 cursor-pointer"
                     >
                       <Download className="h-3.5 w-3.5" />
                       Export CSV
-                    </button>
-                    <button
-                      onClick={clearQueue}
-                      disabled={registrations.length === 0}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition duration-200 cursor-pointer"
-                    >
-                      Clear Queue
                     </button>
                   </div>
                 </div>
 
                 {/* Data Table */}
                 <div className="flex-1 overflow-x-auto overflow-y-auto p-6 max-h-[50vh]">
-                  {registrations.length === 0 ? (
+                  {dbLoading && dbRegistrations.length === 0 ? (
+                    <div className="text-center py-16 text-white/30 italic text-sm flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Loading waitlist...
+                    </div>
+                  ) : dbRegistrations.length === 0 ? (
                     <div className="text-center py-16 text-white/30 italic text-sm">
-                      No sign-ups recorded yet. Test the waitlist form to see data appear here in real-time.
+                      No sign-ups recorded yet. Test the waitlist form to see data appear here.
                     </div>
                   ) : (
                     <table className="w-full text-left text-xs border-collapse">
@@ -543,24 +593,21 @@ function App() {
                           <th className="pb-3 font-semibold pr-4">Email</th>
                           <th className="pb-3 font-semibold pr-4">University</th>
                           <th className="pb-3 font-semibold pr-4">Destination</th>
-                          <th className="pb-3 font-semibold pr-4">Anxiety / Pain Point</th>
+                          <th className="pb-3 font-semibold pr-4">Pain Point</th>
                           <th className="pb-3 font-semibold pr-4 text-center">Desk?</th>
-                          <th className="pb-3 font-semibold text-right">Timestamp</th>
+                          <th className="pb-3 font-semibold text-right">Joined</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/[0.04]">
-                        {registrations.map((reg) => (
+                        {dbRegistrations.map((reg) => (
                           <tr key={reg.id} className="text-white/80 hover:bg-white/[0.01]">
                             <td className="py-3 font-medium pr-4 select-all text-indigo-300">{reg.email}</td>
-                            <td className="py-3 pr-4">
-                              <span className="mr-1.5">{reg.universityFlag}</span>
-                              {reg.universityName}
-                            </td>
-                            <td className="py-3 pr-4 text-white/60">{reg.survey?.city || <span className="text-white/20 italic">Skipped</span>}</td>
-                            <td className="py-3 pr-4 text-white/60">{reg.survey?.painPoint || <span className="text-white/20 italic">Skipped</span>}</td>
-                            <td className="py-3 pr-4 text-center text-white/60">{reg.survey?.deskNeeded || <span className="text-white/20 italic">Skipped</span>}</td>
+                            <td className="py-3 pr-4 text-white/60">{reg.university || <span className="text-white/20 italic">—</span>}</td>
+                            <td className="py-3 pr-4 text-white/60">{reg.city || <span className="text-white/20 italic">Skipped</span>}</td>
+                            <td className="py-3 pr-4 text-white/60">{reg.pain_point || <span className="text-white/20 italic">Skipped</span>}</td>
+                            <td className="py-3 pr-4 text-center text-white/60">{reg.desk_needed || <span className="text-white/20 italic">Skipped</span>}</td>
                             <td className="py-3 text-right text-white/40 whitespace-nowrap">
-                              {reg.timestamp ? new Date(reg.timestamp).toLocaleString() : "N/A"}
+                              {reg.created_at ? new Date(reg.created_at).toLocaleString() : "N/A"}
                             </td>
                           </tr>
                         ))}
