@@ -1,3 +1,6 @@
+import { supabase } from '../lib/supabaseClient'
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowRight, CheckCircle2, Loader2, Mail, Building, Clock, Shield, Users, Search, HelpCircle } from "lucide-react";
@@ -75,17 +78,14 @@ export function WaitlistForm() {
     // Initial email capture guestimate
     const uniInfo = getUniversityFromEmail(email);
     
-    // Save email to localStorage
-    const currentList = JSON.parse(localStorage.getItem("siftplace_waitlist") || "[]");
-    currentList.push({
-      id: regId,
-      email,
-      universityName: uniInfo.name,
-      universityFlag: uniInfo.flag,
-      timestamp: new Date().toISOString(),
-      survey: null,
-    });
-    localStorage.setItem("siftplace_waitlist", JSON.stringify(currentList));
+    // Save email to Supabase
+    const { error } = await supabase
+      .from('waitlist')
+      .insert([{ email: email, university: uniInfo.name }])
+
+    if (error) {
+      console.error('Supabase error:', error)
+    }
 
     // Seed defaults in search
     setUniSearch(uniInfo.name);
