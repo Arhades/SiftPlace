@@ -1,0 +1,93 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --radius: 0.75rem;
+  }
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: #030303;
+  color: #ffffff;
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Hide scrollbar utility (Chrome/Safari/Opera + Firefox/IE) */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Dark thin scrollbar for the rest of the app */
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 999px; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* ---- Weight sliders (indigo), ported & recoloured from frontend/prototype.html ---- */
+input[type="range"].sift-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 26px;
+  background: transparent;
+  cursor: pointer;
+  --pct: 0;
+  margin: 0;
+}
+input[type="range"].sift-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    #6366f1 calc(var(--pct) * 1%),
+    rgba(255, 255, 255, 0.1) calc(var(--pct) * 1%)
+  );
+}
+input[type="range"].sift-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #a5b4fc;
+  border: 3px solid #0b0b12;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.6);
+  margin-top: -6px;
+}
+input[type="range"].sift-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+}
+input[type="range"].sift-slider::-moz-range-progress {
+  height: 8px;
+  border-radius: 999px;
+  background: #6366f1;
+}
+input[type="range"].sift-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border: 3px solid #0b0b12;
+  border-radius: 50%;
+  background: #a5b4fc;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.6);
+}
+
+/* number inputs: hide spinners for a cleaner look */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+@keyframes sift-fade {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-sift-fade { animation: sift-fade 0.3s ease both; }

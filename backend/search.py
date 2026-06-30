@@ -25,7 +25,7 @@ def build_and_score(prefs: dict, city: str | None = None,
     if anchor and anchor[0] is not None and anchor[1] is not None:
         centre = (anchor[0], anchor[1])
     elif city:
-        g = geocode(city)
+        g = geocode(city, prefer_city=True)
         if not g:
             return {"error": f"Could not locate '{city}'.", "results": [], "count": 0}
         centre = (g["lat"], g["lon"])

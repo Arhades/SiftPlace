@@ -15,7 +15,19 @@ import requests
 
 from scoring import haversine_m
 
-OVERPASS_URL = "https://overpass-api.de/api/interpreter"
+# Public Overpass mirrors, tried in order. The canonical endpoint rejects some
+# networks / the default User-Agent with HTTP 406, and individual mirrors go up
+# and down, so we fail over until one answers. All free, no API key.
+OVERPASS_URLS = [
+    "https://overpass-api.de/api/interpreter",
+    "https://maps.mail.ru/osm/tools/overpass/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+]
+
+# Overpass requires an identifying User-Agent; the bare requests default is
+# blocked (406) by some mirrors. Put a real contact here before any public deploy.
+HEADERS = {"User-Agent": "SiftPlace/0.2 (student project; contact: you@example.com)"}
 
 # want -> Overpass tag filters (any match counts).
 TAGS = {
@@ -45,13 +57,16 @@ _TYPE_MAP = {"hotel": "hotel", "hostel": "hostel", "guest_house": "hostel", "apa
 
 
 def _post(query: str, timeout: int = 35):
-    """Run an Overpass query, returning the elements list (empty on any failure)."""
-    try:
-        resp = requests.post(OVERPASS_URL, data={"data": query}, timeout=timeout)
-        resp.raise_for_status()
-        return resp.json().get("elements", [])
-    except Exception:
-        return []
+    """Run an Overpass query against the first mirror that answers; return its
+    elements list (empty only if every mirror fails)."""
+    for url in OVERPASS_URLS:
+        try:
+            resp = requests.post(url, data={"data": query}, headers=HEADERS, timeout=timeout)
+            resp.raise_for_status()
+            return resp.json().get("elements", [])
+        except Exception:
+            continue
+    return []
 
 
 def _coords(el):

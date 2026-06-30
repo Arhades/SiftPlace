@@ -126,13 +126,13 @@ The product must remain free for the end-user to eliminate friction and encourag
 
 ## 9. Execution Phases & Roadmap
 
-### Phase 0: Validate Demand (Current Phase)
+### Phase 0: Validate Demand
 *   **Goal:** Prove that students want this service and will fill out the intake form.
 *   **Action:** Launch a simple landing page with a weight-intake form. Drive 10–20 Bangkok exchange students to it.
 *   **The "Human Algorithm":** The founder manually acts as the matching engine. Look up places on RentHub/Google Maps based on the user's criteria, check for external accessibility and room conditions, and email them a curated "Top 3" list.
 *   **Success Metric:** Number of completed forms and qualitative positive feedback on the recommendations.
 
-### Phase 1: MVP Engine Build
+### Phase 1: MVP Engine Build (Current Phase)
 *   **Goal:** Automate the Phase 0 process.
 *   **Action:** Build the city-agnostic weighted-scoring engine. Integrate OSM for the commute-cost calculator and nearby-gym/7-Eleven search. Precompute proximity for key university areas (e.g., Samyan, Phaya Thai, Salaya).
 
