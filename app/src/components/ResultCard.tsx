@@ -33,7 +33,7 @@ export function ResultCard({
   r: ListingResult;
   isTop: boolean;
   saved: boolean;
-  onToggleSave: (name: string) => void;
+  onToggleSave: (listing: ListingResult) => void;
 }) {
   const mode = r.mode;
   const other = otherMode(mode);
@@ -68,7 +68,7 @@ export function ResultCard({
         </div>
         <button
           type="button"
-          onClick={() => onToggleSave(r.name)}
+          onClick={() => onToggleSave(r)}
           aria-label={saved ? "Remove from saved" : "Save"}
           className={cn(
             "h-9 w-9 rounded-full border flex items-center justify-center transition cursor-pointer shrink-0",

@@ -6,8 +6,8 @@ import { ResultCard } from "./ResultCard";
 import { TradeOffCallout } from "./TradeOffCallout";
 
 export interface ResultsContext {
-  destLabel: string;
   city: string;
+  dest: string;
   budget: number;
   commuteDays: number;
 }
@@ -17,7 +17,7 @@ export function Results({
   note,
   mode,
   context,
-  saved,
+  savedNames,
   onToggleSave,
   onChangeMode,
   geoFailedMsg,
@@ -26,37 +26,33 @@ export function Results({
   note: string | null;
   mode: CommuteMode;
   context: ResultsContext;
-  saved: Set<string>;
-  onToggleSave: (name: string) => void;
+  savedNames: Set<string>;
+  onToggleSave: (listing: ListingResult) => void;
   onChangeMode: (m: CommuteMode) => void;
   geoFailedMsg: string | null;
 }) {
   const tradeOff = computeTradeOff(results, context.commuteDays);
+  const title = context.dest
+    ? `Listings near ${context.dest}`
+    : `Top listings in ${context.city || "your city"}`;
 
   return (
     <div className="space-y-4">
       {/* context header */}
       <div>
-        <p className="text-sm text-white/55">
-          <span className="font-semibold text-white">{results.length}</span>{" "}
-          place{results.length === 1 ? "" : "s"} near{" "}
-          <span className="font-semibold text-white">{context.destLabel}</span>
-          {context.city ? (
-            <>
-              {" "}
-              in <span className="font-semibold text-white">{context.city}</span>
-            </>
-          ) : null}
-          , within{" "}
-          <span className="font-semibold text-white">
+        <h2 className="text-xl font-bold text-white">{title}</h2>
+        <p className="mt-0.5 text-sm text-white/50">
+          <span className="font-semibold text-white/70">{results.length}</span>{" "}
+          place{results.length === 1 ? "" : "s"} · ranked by true monthly cost · within{" "}
+          <span className="font-semibold text-white/70">
             ฿{context.budget.toLocaleString("en-US")}
           </span>
-          /mo.
+          /mo
         </p>
         {geoFailedMsg && <p className="mt-1 text-xs text-amber-300/90">{geoFailedMsg}</p>}
       </div>
 
-      {/* mode toggle (re-runs the search for consistent scores) */}
+      {/* commute mode toggle (re-runs the search for consistent scores) */}
       <div className="flex items-center gap-2">
         <span className="text-[11px] uppercase tracking-wider text-white/40 font-semibold">
           Commute by
@@ -88,7 +84,7 @@ export function Results({
             key={r.name + i}
             r={r}
             isTop={i === 0}
-            saved={saved.has(r.name)}
+            saved={savedNames.has(r.name)}
             onToggleSave={onToggleSave}
           />
         ))}

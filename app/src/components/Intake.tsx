@@ -114,13 +114,13 @@ export function Intake({
       {/* header */}
       <div className="text-center mb-8">
         <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-4">
-          <Sparkles className="h-3.5 w-3.5" /> SiftPlace
+          <Sparkles className="h-3.5 w-3.5" /> SiftPlace filter
         </span>
         <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
-          Find your place, anywhere
+          Filter &amp; rank
         </h1>
         <p className="mt-2 text-sm text-white/45 max-w-md mx-auto">
-          Tell us what matters. We rank real listings by their{" "}
+          Set what matters and we re-rank every listing by its{" "}
           <span className="text-white/70">true monthly cost</span> — rent plus the Grab/Bolt or
           motorbike fare it takes to commute — not rent alone.
         </p>
@@ -363,7 +363,7 @@ export function Intake({
           "Ease your priorities to 20 or less"
         ) : (
           <>
-            Find my best matches <ArrowRight className="h-4 w-4" />
+            Apply filters <ArrowRight className="h-4 w-4" />
           </>
         )}
       </button>

@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { SlidersHorizontal, X } from "lucide-react";
 import {
   geocode,
   search,
@@ -14,7 +15,6 @@ import { Guide } from "@/components/Guide";
 import { BottomNav, type Tab } from "@/components/BottomNav";
 import { LoadingState, EmptyState, ErrorState } from "@/components/States";
 
-type Phase = "intake" | "results";
 type Status = "loading" | "ok" | "empty" | "error";
 
 const RADIUS_DEFAULT = 2500;
@@ -23,7 +23,7 @@ const RADIUS_STEP = 2500;
 const TOP_N = 8;
 const MAX_LISTINGS = 30;
 
-const TAB_TITLES: Record<Exclude<Tab, "matches">, string> = {
+const TAB_TITLES: Record<Exclude<Tab, "listings">, string> = {
   saved: "Saved places",
   areas: "Explore areas",
   guide: "Rent safely",
@@ -56,47 +56,45 @@ function buildReq(
 }
 
 function App() {
-  const [phase, setPhase] = useState<Phase>("intake");
   const [intake, setIntake] = useState<IntakeValues>(defaultIntake);
+  const [filterOpen, setFilterOpen] = useState(false);
 
   const [status, setStatus] = useState<Status>("loading");
   const [results, setResults] = useState<ListingResult[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [geoFailedMsg, setGeoFailedMsg] = useState<string | null>(null);
-  const [ctx, setCtx] = useState<ResultsContext>({
-    destLabel: "",
-    city: "",
-    budget: 0,
-    commuteDays: 5,
-  });
+  const [ctx, setCtx] = useState<ResultsContext>({ city: "", dest: "", budget: 0, commuteDays: 5 });
   const [lastReq, setLastReq] = useState<SearchRequest | null>(null);
   const [radius, setRadius] = useState(RADIUS_DEFAULT);
 
-  const [tab, setTab] = useState<Tab>("matches");
+  const [tab, setTab] = useState<Tab>("listings");
 
-  const [saved, setSaved] = useState<Set<string>>(() => {
+  // Saved listings are stored in full (not just by name) so the Compare table
+  // works across searches and survives reloads. Persisted to localStorage.
+  const [saved, setSaved] = useState<Map<string, ListingResult>>(() => {
     try {
       const raw = localStorage.getItem("siftplace:saved");
-      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+      const arr = raw ? (JSON.parse(raw) as ListingResult[]) : [];
+      return new Map(arr.map((l) => [l.name, l]));
     } catch {
-      return new Set<string>();
+      return new Map<string, ListingResult>();
     }
   });
 
   useEffect(() => {
     try {
-      localStorage.setItem("siftplace:saved", JSON.stringify([...saved]));
+      localStorage.setItem("siftplace:saved", JSON.stringify([...saved.values()]));
     } catch {
       // ignore storage failures (private mode, quota)
     }
   }, [saved]);
 
-  const toggleSave = (name: string) =>
+  const toggleSave = (l: ListingResult) =>
     setSaved((prev) => {
-      const next = new Set(prev);
-      if (next.has(name)) next.delete(name);
-      else next.add(name);
+      const next = new Map(prev);
+      if (next.has(l.name)) next.delete(l.name);
+      else next.set(l.name, l);
       return next;
     });
 
@@ -115,13 +113,10 @@ function App() {
     }
   };
 
-  const handleSubmit = async (values: IntakeValues) => {
+  const handleSearch = async (values: IntakeValues) => {
     setIntake(values);
-    setPhase("results");
-    setTab("matches");
     setStatus("loading");
     setGeoFailedMsg(null);
-    window.scrollTo(0, 0);
 
     let anchor: { lat: number; lon: number } | null = null;
     let geoFailed = false;
@@ -148,13 +143,30 @@ function App() {
         : null,
     );
     setCtx({
-      destLabel: dest || values.city || "your city",
-      city: dest ? values.city : "",
+      city: values.city,
+      dest: dest,
       budget: values.budget,
       commuteDays: values.commuteDays,
     });
 
     await runSearch(buildReq(values, anchor, RADIUS_DEFAULT));
+  };
+
+  // Browse-first: load default (Bangkok) listings on mount. Guard against the
+  // StrictMode double-invoke so we don't hit Overpass twice.
+  const didInit = useRef(false);
+  useEffect(() => {
+    if (didInit.current) return;
+    didInit.current = true;
+    void handleSearch(defaultIntake());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const applyFilters = (values: IntakeValues) => {
+    setFilterOpen(false);
+    setTab("listings");
+    window.scrollTo(0, 0);
+    void handleSearch(values);
   };
 
   const changeMode = (m: CommuteMode) => {
@@ -169,11 +181,11 @@ function App() {
   };
 
   const retry = () => {
-    void handleSubmit(intake);
+    void handleSearch(intake);
   };
 
-  const goEdit = () => {
-    setPhase("intake");
+  const openFilter = () => {
+    setFilterOpen(true);
     window.scrollTo(0, 0);
   };
 
@@ -182,6 +194,9 @@ function App() {
     window.scrollTo(0, 0);
   };
 
+  const savedNames = new Set(saved.keys());
+  const savedItems = [...saved.values()];
+
   return (
     <div className="min-h-screen text-white">
       {/* ambient background */}
@@ -189,58 +204,69 @@ function App() {
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.06] via-transparent to-rose-500/[0.05]" />
       </div>
 
-      {phase === "intake" ? (
-        <Intake initial={intake} onSubmit={handleSubmit} />
-      ) : (
-        <div className="flex flex-col min-h-screen">
-          <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#070707]/90 backdrop-blur-md">
-            <div className="max-w-3xl mx-auto flex items-center justify-between px-5 py-3">
+      <div className="flex flex-col min-h-screen">
+        <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#070707]/90 backdrop-blur-md">
+          <div className="max-w-3xl mx-auto flex items-center justify-between px-5 py-3">
+            <span className="font-semibold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+              SiftPlace
+            </span>
+            {tab === "listings" ? (
               <button
-                onClick={goEdit}
-                className="text-xs font-medium text-white/55 hover:text-white transition cursor-pointer"
+                onClick={openFilter}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.12] bg-white/[0.03] text-white/75 text-xs font-semibold hover:bg-white/[0.06] transition cursor-pointer"
               >
-                ← Edit search
+                <SlidersHorizontal className="h-3.5 w-3.5" /> Filter
               </button>
-              <span className="font-semibold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
-                SiftPlace
-              </span>
+            ) : (
               <span className="w-16" />
-            </div>
-          </header>
-
-          <main className="flex-1 max-w-3xl w-full mx-auto px-5 py-6">
-            {tab !== "matches" && (
-              <h2 className="text-xl font-bold mb-4">{TAB_TITLES[tab]}</h2>
             )}
+          </div>
+        </header>
 
-            {tab === "matches" &&
-              (status === "loading" ? (
-                <LoadingState />
-              ) : status === "error" ? (
-                <ErrorState message={errorMsg} onRetry={retry} onEdit={goEdit} />
-              ) : status === "empty" ? (
-                <EmptyState onWider={widerRadius} onEdit={goEdit} canWiden={radius < RADIUS_MAX} />
-              ) : (
-                <Results
-                  results={results}
-                  note={note}
-                  mode={lastReq?.commute_mode ?? "car"}
-                  context={ctx}
-                  saved={saved}
-                  onToggleSave={toggleSave}
-                  onChangeMode={changeMode}
-                  geoFailedMsg={geoFailedMsg}
-                />
-              ))}
+        <main className="flex-1 max-w-3xl w-full mx-auto px-5 py-6">
+          {tab !== "listings" && <h2 className="text-xl font-bold mb-4">{TAB_TITLES[tab]}</h2>}
 
-            {tab === "saved" && (
-              <Saved results={results} saved={saved} onToggleSave={toggleSave} />
-            )}
-            {tab === "areas" && <Areas />}
-            {tab === "guide" && <Guide />}
-          </main>
+          {tab === "listings" &&
+            (status === "loading" ? (
+              <LoadingState />
+            ) : status === "error" ? (
+              <ErrorState message={errorMsg} onRetry={retry} onEdit={openFilter} />
+            ) : status === "empty" ? (
+              <EmptyState onWider={widerRadius} onEdit={openFilter} canWiden={radius < RADIUS_MAX} />
+            ) : (
+              <Results
+                results={results}
+                note={note}
+                mode={lastReq?.commute_mode ?? "car"}
+                context={ctx}
+                savedNames={savedNames}
+                onToggleSave={toggleSave}
+                onChangeMode={changeMode}
+                geoFailedMsg={geoFailedMsg}
+              />
+            ))}
 
-          <BottomNav tab={tab} onTab={goTab} savedCount={saved.size} />
+          {tab === "saved" && <Saved items={savedItems} onToggleSave={toggleSave} />}
+          {tab === "areas" && <Areas />}
+          {tab === "guide" && <Guide />}
+        </main>
+
+        <BottomNav tab={tab} onTab={goTab} savedCount={saved.size} />
+      </div>
+
+      {/* SiftPlace filter overlay */}
+      {filterOpen && (
+        <div className="fixed inset-0 z-50 bg-[#030303] overflow-y-auto">
+          <div className="sticky top-0 z-10 flex justify-end px-5 py-3 bg-[#030303]/80 backdrop-blur-md">
+            <button
+              onClick={() => setFilterOpen(false)}
+              aria-label="Close filters"
+              className="h-9 w-9 rounded-full border border-white/[0.1] bg-white/[0.03] text-white/60 hover:text-white flex items-center justify-center cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <Intake initial={intake} onSubmit={applyFilters} />
         </div>
       )}
     </div>

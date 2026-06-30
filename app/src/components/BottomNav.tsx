@@ -1,10 +1,10 @@
-import { Search, Heart, Map, Shield } from "lucide-react";
+import { List, Heart, Map, Shield } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type Tab = "matches" | "saved" | "areas" | "guide";
+export type Tab = "listings" | "saved" | "areas" | "guide";
 
-const TABS: { id: Tab; label: string; Icon: typeof Search }[] = [
-  { id: "matches", label: "Matches", Icon: Search },
+const TABS: { id: Tab; label: string; Icon: typeof List }[] = [
+  { id: "listings", label: "Listings", Icon: List },
   { id: "saved", label: "Saved", Icon: Heart },
   { id: "areas", label: "Areas", Icon: Map },
   { id: "guide", label: "Guide", Icon: Shield },
