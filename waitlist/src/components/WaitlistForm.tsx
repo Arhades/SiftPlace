@@ -304,7 +304,7 @@ export function WaitlistForm() {
   };
 
   return (
-    <div className="w-full max-w-md mx-auto bg-white/[0.02] backdrop-blur-xl border border-white/[0.08] rounded-2xl p-6 sm:p-8 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
+    <div className="w-full max-w-md mx-auto bg-lowest border-2 border-line rounded-[28px] p-6 sm:p-8 shadow-[0_10px_30px_-12px_rgba(120,89,0,0.28)]">
       <AnimatePresence mode="wait">
         {step === "email" && (
           <motion.div
@@ -315,29 +315,29 @@ export function WaitlistForm() {
             transition={{ duration: 0.2 }}
           >
             <div className="text-center mb-6">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-xs font-semibold mb-3">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-secondary/10 border border-secondary/30 text-secondary-dim text-xs font-bold mb-3">
                 <Users className="h-3.5 w-3.5" />
                 <span>{waitlistCount} students in priority queue</span>
               </div>
-              <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">
+              <h3 className="text-xl sm:text-2xl font-bold text-ink mb-2">
                 Join SiftPlace Priority Queue
               </h3>
-              <p className="text-sm text-white/50">
+              <p className="text-sm text-muted font-medium">
                 Stop guessing. Find a home in Bangkok or other sprawling cities that fits your commute and budget.
               </p>
 
               {/* Pilot Launch Progress Bar */}
               <div className="mt-5 text-left space-y-1.5">
-                <div className="flex justify-between text-[10px] text-white/40 font-medium">
+                <div className="flex justify-between text-[10px] text-muted font-bold">
                   <span>Progress to Bangkok Pilot Launch</span>
-                  <span className="text-indigo-300 font-semibold">{waitlistCount} / 200 students</span>
+                  <span className="text-secondary-dim font-bold">{waitlistCount} / 200 students</span>
                 </div>
-                <div className="w-full bg-white/[0.05] rounded-full h-2 overflow-hidden border border-white/[0.03]">
-                  <motion.div 
+                <div className="w-full bg-surface-high rounded-full h-3 overflow-hidden">
+                  <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${Math.min((waitlistCount / 200) * 100, 100)}%` }}
                     transition={{ duration: 1, ease: "easeOut" }}
-                    className="bg-gradient-to-r from-indigo-500 via-purple-500 to-rose-500 h-full rounded-full"
+                    className="bg-gradient-to-r from-primary via-primary-dim to-secondary h-full rounded-full"
                   />
                 </div>
               </div>
@@ -345,7 +345,7 @@ export function WaitlistForm() {
 
             <form onSubmit={handleEmailSubmit} className="space-y-4">
               <div className="relative">
-                <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-white/30">
+                <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-muted">
                   <Mail className="h-5 w-5" />
                 </span>
                 <input
@@ -358,16 +358,12 @@ export function WaitlistForm() {
                     if (emailError) setEmailError("");
                   }}
                   disabled={isLoading}
-                  className={`w-full pl-10 pr-4 py-3 bg-white/[0.03] border rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 transition duration-200 text-sm ${
-                    emailError
-                      ? "border-rose-500/60 focus:ring-rose-500/50"
-                      : "border-white/[0.1] focus:ring-indigo-500/50 focus:border-indigo-500/80"
-                  }`}
+                  className={`sf-field pl-11 py-3.5 ${emailError ? "border-error focus:border-error" : ""}`}
                 />
               </div>
 
               {emailError && (
-                <p className="text-rose-400 text-xs text-center font-medium -mt-1">
+                <p className="text-error text-xs text-center font-bold -mt-1">
                   {emailError}
                 </p>
               )}
@@ -375,7 +371,7 @@ export function WaitlistForm() {
               <button
                 type="submit"
                 disabled={isLoading || !validateEmail(email)}
-                className="w-full flex items-center justify-center gap-2 py-3 px-4 bg-gradient-to-r from-indigo-500 to-rose-500 hover:from-indigo-600 hover:to-rose-600 text-white font-medium rounded-xl text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg shadow-indigo-500/20 active:scale-[0.98]"
+                className="sf-cta w-full flex items-center justify-center gap-2 py-3.5 px-4 text-base"
               >
                 {isLoading ? (
                   <>
@@ -402,11 +398,11 @@ export function WaitlistForm() {
             transition={{ duration: 0.2 }}
           >
             <div className="text-center mb-5">
-              <span className="text-[10px] text-white/40 uppercase tracking-widest block mb-1">Step 1 of 3</span>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <span className="text-[10px] text-muted uppercase tracking-widest font-bold block mb-1">Step 1 of 3</span>
+              <h3 className="text-lg font-bold text-ink mb-1">
                 Which university are you from?
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-muted font-medium">
                 Type 2+ letters to search top global exchange sending universities.
               </p>
             </div>
@@ -414,10 +410,10 @@ export function WaitlistForm() {
             <form onSubmit={handleUniSubmit} className="space-y-4">
               {selectedUni ? (
                 /* Selected university state */
-                <div className="p-4 bg-white/[0.03] border border-white/[0.08] rounded-xl flex items-center justify-between gap-3">
+                <div className="p-4 bg-surface-low border border-line rounded-2xl flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xl flex-shrink-0">{customCountryFlag}</span>
-                    <span className="text-sm font-medium text-white truncate">
+                    <span className="text-sm font-bold text-ink truncate">
                       {selectedUni === "Other" ? customUni : selectedUni}
                     </span>
                   </div>
@@ -427,7 +423,7 @@ export function WaitlistForm() {
                       setSelectedUni("");
                       setCustomUni("");
                     }}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
+                    className="text-xs text-secondary hover:text-secondary-dim font-bold cursor-pointer"
                   >
                     Change
                   </button>
@@ -436,7 +432,7 @@ export function WaitlistForm() {
                 /* Search input and combobox */
                 <div className="space-y-2 relative">
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-white/30">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-muted">
                       <Search className="h-4 w-4" />
                     </span>
                     <input
@@ -444,39 +440,39 @@ export function WaitlistForm() {
                       placeholder="Search university name (e.g. Munich, Singapore, LSE...)"
                       value={uniSearch}
                       onChange={(e) => handleUniSearchChange(e.target.value)}
-                      className="w-full pl-9 pr-10 py-2.5 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-xs"
+                      className="sf-field pl-10 pr-10"
                     />
                     {isSearching && (
                       <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" />
                       </span>
                     )}
                   </div>
 
                   {/* Search results list */}
                   {uniSearch.trim().length >= 2 && (
-                    <div className="bg-[#0b0b0b] border border-white/[0.1] rounded-xl overflow-hidden shadow-2xl max-h-[180px] overflow-y-auto z-50 text-left">
+                    <div className="bg-lowest border border-line rounded-2xl overflow-hidden shadow-[0_10px_30px_-12px_rgba(120,89,0,0.28)] max-h-[180px] overflow-y-auto z-50 text-left">
                       {uniResults.length > 0 ? (
                         uniResults.map((item) => (
                           <button
                             key={item.name}
                             type="button"
                             onClick={() => selectPresetUniversity(item.name, item.flag)}
-                            className="w-full py-2.5 px-3 hover:bg-white/[0.05] text-white/80 text-left text-xs transition border-b border-white/[0.03] last:border-0 cursor-pointer flex items-center gap-2 truncate"
+                            className="w-full py-2.5 px-3 hover:bg-surface-c text-ink text-left text-xs transition border-b border-line last:border-0 cursor-pointer flex items-center gap-2 truncate font-semibold"
                           >
                             <span>{item.flag}</span>
                             <span className="truncate">{item.name}</span>
                           </button>
                         ))
                       ) : (
-                        <div className="py-3 px-4 text-xs text-white/40 text-center">
+                        <div className="py-3 px-4 text-xs text-muted text-center">
                           No match found.
                         </div>
                       )}
                       <button
                         type="button"
                         onClick={selectCustomUniversity}
-                        className="w-full py-2.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-300 text-left text-xs font-semibold flex items-center gap-2 cursor-pointer border-t border-white/[0.05]"
+                        className="w-full py-2.5 px-3 bg-secondary/10 hover:bg-secondary/15 text-secondary-dim text-left text-xs font-bold flex items-center gap-2 cursor-pointer border-t border-line"
                       >
                         <HelpCircle className="h-3.5 w-3.5" />
                         Can't find it? Enter manually
@@ -499,14 +495,14 @@ export function WaitlistForm() {
                     value={customUni}
                     onChange={(e) => setCustomUni(e.target.value)}
                     required={selectedUni === "Other"}
-                    className="w-full py-2.5 px-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-indigo-500 text-xs"
+                    className="sf-field"
                   />
                   <div className="space-y-1.5 text-left">
-                    <label className="text-[10px] text-white/40 font-medium">Select your country flag:</label>
+                    <label className="text-[10px] text-muted font-bold">Select your country flag:</label>
                     <select
                       value={customCountryFlag}
                       onChange={(e) => setCustomCountryFlag(e.target.value)}
-                      className="w-full py-2 px-3 bg-[#0d0d0d] border border-white/[0.1] rounded-xl text-white text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
+                      className="sf-field cursor-pointer"
                     >
                       {COUNTRIES.map((country) => (
                         <option key={country.code} value={country.flag}>
@@ -522,14 +518,14 @@ export function WaitlistForm() {
                 <button
                   type="button"
                   onClick={skipSurvey}
-                  className="flex-1 py-2.5 border border-white/[0.1] hover:bg-white/[0.04] text-white/60 text-xs font-medium rounded-xl transition duration-200 cursor-pointer"
+                  className="flex-1 py-3 border-2 border-line hover:bg-surface-c text-muted text-xs font-bold rounded-2xl transition duration-200 cursor-pointer"
                 >
                   Skip Questions
                 </button>
                 <button
                   type="submit"
                   disabled={!selectedUni || (selectedUni === "Other" && !customUni)}
-                  className="flex-1 py-2.5 bg-white text-black hover:bg-white/90 text-xs font-semibold rounded-xl transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5 animate-pulse"
+                  className="sf-cta flex-1 py-3 text-xs flex items-center justify-center gap-1.5"
                 >
                   Next Step
                 </button>
@@ -547,11 +543,11 @@ export function WaitlistForm() {
             transition={{ duration: 0.2 }}
           >
             <div className="text-center mb-5">
-              <span className="text-[10px] text-white/40 uppercase tracking-widest block mb-1">Step 2 of 3</span>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <span className="text-[10px] text-muted uppercase tracking-widest font-bold block mb-1">Step 2 of 3</span>
+              <h3 className="text-lg font-bold text-ink mb-1">
                 Which city are you heading to?
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-muted font-medium">
                 Pick a launch city, or search any city in the world.
               </p>
             </div>
@@ -564,10 +560,10 @@ export function WaitlistForm() {
                     key={cityOpt.label}
                     type="button"
                     onClick={() => selectCity(cityOpt.label, cityOpt.flag)}
-                    className={`py-2.5 px-3 text-left text-xs rounded-xl border transition-all cursor-pointer ${
+                    className={`py-2.5 px-3 text-left text-xs rounded-2xl border-2 transition-all cursor-pointer font-bold ${
                       survey.city === cityOpt.label
-                        ? "bg-indigo-500/25 border-indigo-500 text-white font-medium"
-                        : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
+                        ? "bg-primary/25 border-primary-dim text-ink"
+                        : "bg-surface-low border-line text-muted hover:bg-surface-c"
                     }`}
                   >
                     {cityOpt.flag} {cityOpt.city}
@@ -577,15 +573,15 @@ export function WaitlistForm() {
 
               {/* Selected city or full world-city search */}
               {selectedCity && survey.city === selectedCity.label ? (
-                <div className="p-4 bg-white/[0.03] border border-white/[0.08] rounded-xl flex items-center justify-between gap-3">
+                <div className="p-4 bg-surface-low border border-line rounded-2xl flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <span className="text-xl flex-shrink-0">{selectedCity.flag}</span>
-                    <span className="text-sm font-medium text-white truncate">{selectedCity.label}</span>
+                    <span className="text-sm font-bold text-ink truncate">{selectedCity.label}</span>
                   </div>
                   <button
                     type="button"
                     onClick={clearSelectedCity}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 font-medium cursor-pointer"
+                    className="text-xs text-secondary hover:text-secondary-dim font-bold cursor-pointer"
                   >
                     Change
                   </button>
@@ -593,7 +589,7 @@ export function WaitlistForm() {
               ) : (
                 <div className="space-y-2 relative">
                   <div className="relative">
-                    <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-white/30">
+                    <span className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-muted">
                       <Search className="h-4 w-4" />
                     </span>
                     <input
@@ -601,38 +597,38 @@ export function WaitlistForm() {
                       placeholder="Or search any city worldwide (e.g. Berlin, Osaka...)"
                       value={citySearch}
                       onChange={(e) => handleCitySearchChange(e.target.value)}
-                      className="w-full pl-9 pr-10 py-2.5 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-xs"
+                      className="sf-field pl-10 pr-10"
                     />
                     {citiesLoading && (
                       <span className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                        <Loader2 className="h-3.5 w-3.5 animate-spin text-white/40" />
+                        <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" />
                       </span>
                     )}
                   </div>
 
                   {citySearch.trim().length >= 2 && (
-                    <div className="bg-[#0b0b0b] border border-white/[0.1] rounded-xl overflow-hidden shadow-2xl max-h-[180px] overflow-y-auto z-50 text-left">
+                    <div className="bg-lowest border border-line rounded-2xl overflow-hidden shadow-[0_10px_30px_-12px_rgba(120,89,0,0.28)] max-h-[180px] overflow-y-auto z-50 text-left">
                       {cityResults.map((item) => (
                         <button
                           key={item.label}
                           type="button"
                           onClick={() => selectCity(item.label, item.flag)}
-                          className="w-full py-2.5 px-3 hover:bg-white/[0.05] text-white/80 text-left text-xs transition border-b border-white/[0.03] last:border-0 cursor-pointer flex items-center gap-2 truncate"
+                          className="w-full py-2.5 px-3 hover:bg-surface-c text-ink text-left text-xs transition border-b border-line last:border-0 cursor-pointer flex items-center gap-2 truncate font-semibold"
                         >
                           <span>{item.flag}</span>
                           <span className="truncate">{item.city}</span>
-                          <span className="text-white/30 truncate">· {item.country}</span>
+                          <span className="text-muted truncate">· {item.country}</span>
                         </button>
                       ))}
                       {cityResults.length === 0 && (
-                        <div className="py-3 px-4 text-xs text-white/40 text-center">
+                        <div className="py-3 px-4 text-xs text-muted text-center">
                           {citiesLoading ? "Loading world cities…" : "No match found."}
                         </div>
                       )}
                       <button
                         type="button"
                         onClick={() => selectCity(citySearch.trim(), "🌐")}
-                        className="w-full py-2.5 px-3 bg-indigo-500/10 hover:bg-indigo-500/15 text-indigo-300 text-left text-xs font-semibold flex items-center gap-2 cursor-pointer border-t border-white/[0.05]"
+                        className="w-full py-2.5 px-3 bg-secondary/10 hover:bg-secondary/15 text-secondary-dim text-left text-xs font-bold flex items-center gap-2 cursor-pointer border-t border-line"
                       >
                         <MapPin className="h-3.5 w-3.5" />
                         Use "{citySearch.trim()}"
@@ -646,14 +642,14 @@ export function WaitlistForm() {
                 <button
                   type="button"
                   onClick={() => setStep("uni")}
-                  className="flex-1 py-2.5 border border-white/[0.1] hover:bg-white/[0.04] text-white/60 text-xs font-medium rounded-xl transition duration-200 cursor-pointer"
+                  className="flex-1 py-3 border-2 border-line hover:bg-surface-c text-muted text-xs font-bold rounded-2xl transition duration-200 cursor-pointer"
                 >
                   Back
                 </button>
                 <button
                   type="submit"
                   disabled={!survey.city}
-                  className="flex-1 py-2.5 bg-white text-black hover:bg-white/90 text-xs font-semibold rounded-xl transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
+                  className="sf-cta flex-1 py-3 text-xs"
                 >
                   Next Step
                 </button>
@@ -671,11 +667,11 @@ export function WaitlistForm() {
             transition={{ duration: 0.2 }}
           >
             <div className="text-center mb-5">
-              <span className="text-[10px] text-white/40 uppercase tracking-widest block mb-1">Step 3 of 3</span>
-              <h3 className="text-lg font-semibold text-white mb-1">
+              <span className="text-[10px] text-muted uppercase tracking-widest font-bold block mb-1">Step 3 of 3</span>
+              <h3 className="text-lg font-bold text-ink mb-1">
                 Your Housing Preferences
               </h3>
-              <p className="text-xs text-white/50">
+              <p className="text-xs text-muted font-medium">
                 Help SiftPlace customize your local commute and search criteria.
               </p>
             </div>
@@ -683,7 +679,7 @@ export function WaitlistForm() {
             <form onSubmit={handleSurveySubmit} className="space-y-4 text-left">
               {/* Question 3: Pain Point */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-white/70 block">
+                <label className="text-[11px] font-bold text-ink block">
                   3. What is your biggest accommodation anxiety?
                 </label>
                 <div className="space-y-1.5">
@@ -702,13 +698,13 @@ export function WaitlistForm() {
                           setIsOtherPain(false);
                           setSurvey({ ...survey, painPoint: opt.label });
                         }}
-                        className={`w-full py-2.5 px-3 flex items-center gap-2.5 text-left text-xs rounded-xl border transition-all cursor-pointer ${
+                        className={`w-full py-2.5 px-3 flex items-center gap-2.5 text-left text-xs rounded-2xl border-2 transition-all cursor-pointer font-bold ${
                           active
-                            ? "bg-rose-500/25 border-rose-500 text-white font-medium"
-                            : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
+                            ? "bg-secondary/20 border-secondary text-ink"
+                            : "bg-surface-low border-line text-muted hover:bg-surface-c"
                         }`}
                       >
-                        <Icon className="h-4 w-4 text-white/40 flex-shrink-0" />
+                        <Icon className={`h-4 w-4 flex-shrink-0 ${active ? "text-secondary" : "text-muted"}`} />
                         <span>{opt.label}</span>
                       </button>
                     );
@@ -721,13 +717,13 @@ export function WaitlistForm() {
                       setIsOtherPain(true);
                       setSurvey({ ...survey, painPoint: customPain.trim() });
                     }}
-                    className={`w-full py-2.5 px-3 flex items-center gap-2.5 text-left text-xs rounded-xl border transition-all cursor-pointer ${
+                    className={`w-full py-2.5 px-3 flex items-center gap-2.5 text-left text-xs rounded-2xl border-2 transition-all cursor-pointer font-bold ${
                       isOtherPain
-                        ? "bg-rose-500/25 border-rose-500 text-white font-medium"
-                        : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
+                        ? "bg-secondary/20 border-secondary text-ink"
+                        : "bg-surface-low border-line text-muted hover:bg-surface-c"
                     }`}
                   >
-                    <HelpCircle className="h-4 w-4 text-white/40 flex-shrink-0" />
+                    <HelpCircle className={`h-4 w-4 flex-shrink-0 ${isOtherPain ? "text-secondary" : "text-muted"}`} />
                     <span>Other</span>
                   </button>
 
@@ -743,7 +739,7 @@ export function WaitlistForm() {
                         setCustomPain(e.target.value);
                         setSurvey({ ...survey, painPoint: e.target.value.trim() });
                       }}
-                      className="w-full py-2.5 px-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/20 focus:outline-none focus:ring-1 focus:ring-rose-500 text-xs"
+                      className="sf-field"
                     />
                   )}
                 </div>
@@ -751,7 +747,7 @@ export function WaitlistForm() {
 
               {/* Question 4: Study Desk */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-medium text-white/70 block">
+                <label className="text-[11px] font-bold text-ink block">
                   4. Do you need a study desk/workspace in your room?
                 </label>
                 <div className="grid grid-cols-3 gap-2">
@@ -764,10 +760,10 @@ export function WaitlistForm() {
                       key={opt.id}
                       type="button"
                       onClick={() => setSurvey({ ...survey, deskNeeded: opt.label })}
-                      className={`py-2 text-center text-xs rounded-xl border transition-all cursor-pointer ${
+                      className={`py-2.5 text-center text-xs rounded-2xl border-2 transition-all cursor-pointer font-bold ${
                         survey.deskNeeded === opt.label
-                          ? "bg-violet-500/25 border-violet-500 text-white font-medium"
-                          : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.04]"
+                          ? "bg-tertiary-c border-tertiary text-tertiary"
+                          : "bg-surface-low border-line text-muted hover:bg-surface-c"
                       }`}
                     >
                       {opt.label}
@@ -780,14 +776,14 @@ export function WaitlistForm() {
                 <button
                   type="button"
                   onClick={() => setStep("city")}
-                  className="flex-1 py-2.5 border border-white/[0.1] hover:bg-white/[0.04] text-white/60 text-xs font-medium rounded-xl transition duration-200 cursor-pointer"
+                  className="flex-1 py-3 border-2 border-line hover:bg-surface-c text-muted text-xs font-bold rounded-2xl transition duration-200 cursor-pointer"
                 >
                   Back
                 </button>
                 <button
                   type="submit"
                   disabled={isLoading || !survey.painPoint || !survey.deskNeeded}
-                  className="flex-1 py-2.5 bg-white text-black hover:bg-white/90 text-xs font-semibold rounded-xl transition duration-200 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-1.5"
+                  className="sf-cta flex-1 py-3 text-xs flex items-center justify-center gap-1.5"
                 >
                   {isLoading ? (
                     <>
@@ -811,29 +807,29 @@ export function WaitlistForm() {
             transition={{ duration: 0.3 }}
             className="text-center py-4"
           >
-            <div className="inline-flex items-center justify-center p-3 bg-emerald-500/10 rounded-full text-emerald-400 mb-4">
-              <CheckCircle2 className="h-8 w-8" />
+            <div className="inline-flex items-center justify-center h-16 w-16 rounded-full sf-avatar mb-4">
+              <CheckCircle2 className="h-8 w-8 text-secondary-dim" />
             </div>
-            
-            <h3 className="text-xl sm:text-2xl font-semibold text-white mb-2">
+
+            <h3 className="text-xl sm:text-2xl font-bold text-ink mb-2">
               You're in the Queue!
             </h3>
-            
-            <div className="my-6 inline-block bg-white/[0.03] border border-white/[0.08] rounded-xl px-5 py-3.5">
-              <span className="text-xs uppercase tracking-widest text-white/40 block mb-0.5">
+
+            <div className="my-6 inline-block bg-surface-low border border-line rounded-2xl px-5 py-3.5">
+              <span className="text-xs uppercase tracking-widest text-muted font-bold block mb-0.5">
                 Your Queue Position
               </span>
-              <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-300 to-rose-300">
+              <span className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary-dim to-secondary">
                 #{joinedPosition}
               </span>
             </div>
 
-            <p className="text-sm text-white/50 mb-6 max-w-xs mx-auto leading-relaxed">
-              We'll send launch notifications and early housing recommendations directly to <span className="text-white font-medium">{email}</span>.
+            <p className="text-sm text-muted mb-6 max-w-xs mx-auto leading-relaxed font-medium">
+              We'll send launch notifications and early housing recommendations directly to <span className="text-ink font-bold">{email}</span>.
             </p>
 
-            <div className="pt-2 border-t border-white/[0.06]">
-              <span className="text-xs text-white/30 block mb-3">Want to skip the queue?</span>
+            <div className="pt-2 border-t border-line">
+              <span className="text-xs text-muted block mb-3">Want to skip the queue?</span>
               <a
                 href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(window.location.origin)}&mini=true&title=${encodeURIComponent("Joining SiftPlace waitlist - the smart housing matcher for international students!")}`}
                 target="_blank"

@@ -7,7 +7,7 @@ export function Guide() {
   const [open, setOpen] = useState<number | null>(null);
   return (
     <div className="space-y-3 animate-sift-fade">
-      <p className="text-xs text-white/40">
+      <p className="text-xs text-muted font-medium">
         Avoid the classic newcomer mistakes — SiftPlace's quick checklist.
       </p>
       {GUIDE.map((g, i) => {
@@ -15,23 +15,23 @@ export function Guide() {
         return (
           <div
             key={g.q}
-            className="bg-white/[0.02] border border-white/[0.08] rounded-2xl overflow-hidden"
+            className="sf-card overflow-hidden"
           >
             <button
               type="button"
               onClick={() => setOpen(isOpen ? null : i)}
               className="w-full flex items-center gap-3 p-4 text-left cursor-pointer"
             >
-              <span className="h-9 w-9 rounded-xl bg-white/[0.04] flex items-center justify-center text-lg shrink-0">
+              <span className="h-9 w-9 rounded-2xl bg-surface-c flex items-center justify-center text-lg shrink-0">
                 {g.icon}
               </span>
-              <span className="flex-1 text-sm font-semibold text-white">{g.q}</span>
+              <span className="flex-1 text-sm font-bold text-ink">{g.q}</span>
               <ChevronDown
-                className={cn("h-4 w-4 text-white/40 transition-transform shrink-0", isOpen && "rotate-180")}
+                className={cn("h-4 w-4 text-muted transition-transform shrink-0", isOpen && "rotate-180")}
               />
             </button>
             {isOpen && (
-              <p className="px-4 pb-4 pl-16 text-sm text-white/50 leading-relaxed">{g.a}</p>
+              <p className="px-4 pb-4 pl-16 text-sm text-muted leading-relaxed font-medium">{g.a}</p>
             )}
           </div>
         );

@@ -20,7 +20,7 @@ export function BottomNav({
   savedCount: number;
 }) {
   return (
-    <nav className="sticky bottom-0 z-40 border-t border-white/[0.08] bg-[#070707]/95 backdrop-blur-md">
+    <nav className="sticky bottom-0 z-40 border-t border-line bg-lowest/95 backdrop-blur-md">
       <div className="max-w-3xl mx-auto flex justify-around px-2 py-2">
         {TABS.map(({ id, label, Icon }) => {
           const active = tab === id;
@@ -30,14 +30,14 @@ export function BottomNav({
               type="button"
               onClick={() => onTab(id)}
               className={cn(
-                "relative flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg text-[11px] font-semibold transition cursor-pointer",
-                active ? "text-indigo-300" : "text-white/45 hover:text-white/70",
+                "relative flex flex-col items-center gap-1 px-4 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer",
+                active ? "text-secondary" : "text-muted hover:text-ink",
               )}
             >
               <Icon className="h-5 w-5" />
               {label}
               {id === "saved" && savedCount > 0 && (
-                <span className="absolute top-0 right-1.5 min-w-4 h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute top-0 right-1.5 min-w-4 h-4 px-1 rounded-full bg-secondary text-on-secondary text-[9px] font-bold flex items-center justify-center">
                   {savedCount}
                 </span>
               )}

@@ -40,32 +40,32 @@ export function Results({
     <div className="space-y-4">
       {/* context header */}
       <div>
-        <h2 className="text-xl font-bold text-white">{title}</h2>
-        <p className="mt-0.5 text-sm text-white/50">
-          <span className="font-semibold text-white/70">{results.length}</span>{" "}
+        <h2 className="text-xl font-bold text-ink">{title}</h2>
+        <p className="mt-0.5 text-sm text-muted font-medium">
+          <span className="font-bold text-ink">{results.length}</span>{" "}
           place{results.length === 1 ? "" : "s"} · ranked by true monthly cost · within{" "}
-          <span className="font-semibold text-white/70">
+          <span className="font-bold text-ink">
             ฿{context.budget.toLocaleString("en-US")}
           </span>
           /mo
         </p>
-        {geoFailedMsg && <p className="mt-1 text-xs text-amber-300/90">{geoFailedMsg}</p>}
+        {geoFailedMsg && <p className="mt-1 text-xs text-secondary-dim font-semibold">{geoFailedMsg}</p>}
       </div>
 
       {/* commute mode toggle (re-runs the search for consistent scores) */}
       <div className="flex items-center gap-2">
-        <span className="text-[11px] uppercase tracking-wider text-white/40 font-semibold">
+        <span className="text-[11px] uppercase tracking-wider text-muted font-bold">
           Commute by
         </span>
-        <div className="inline-flex rounded-xl border border-white/[0.1] bg-white/[0.02] p-0.5">
+        <div className="inline-flex rounded-full border-2 border-line bg-lowest p-0.5">
           {MODE_OPTIONS.map((m) => (
             <button
               key={m.value}
               type="button"
               onClick={() => onChangeMode(m.value)}
               className={cn(
-                "px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer",
-                mode === m.value ? "bg-indigo-500 text-white" : "text-white/55 hover:text-white/80",
+                "px-3 py-1.5 rounded-full text-xs font-bold transition cursor-pointer",
+                mode === m.value ? "bg-primary text-on-primary" : "text-muted hover:text-ink",
               )}
             >
               {m.icon} {MODE_SHORT[m.value]}
@@ -91,8 +91,8 @@ export function Results({
       </div>
 
       {note && (
-        <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4 text-xs text-white/45 leading-relaxed">
-          <span className="font-semibold text-white/60">Honest data note:</span> {note}
+        <div className="rounded-2xl border border-line bg-surface-low p-4 text-xs text-muted leading-relaxed font-medium">
+          <span className="font-bold text-ink">Honest data note:</span> {note}
         </div>
       )}
     </div>
