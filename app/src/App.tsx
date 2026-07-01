@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import {
   geocode,
   search,
@@ -58,6 +59,12 @@ function buildReq(
 function App() {
   const [intake, setIntake] = useState<IntakeValues>(defaultIntake);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // Solar Friend theme toggle — warm light by default, warm dark on demand.
+  const [dark, setDark] = useState(false);
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? "dark" : "";
+  }, [dark]);
 
   const [status, setStatus] = useState<Status>("loading");
   const [results, setResults] = useState<ListingResult[]>([]);
@@ -198,33 +205,42 @@ function App() {
   const savedItems = [...saved.values()];
 
   return (
-    <div className="min-h-screen text-white">
+    <div className="min-h-screen text-ink">
       {/* ambient background */}
-      <div className="fixed inset-0 -z-10 bg-[#030303]">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/[0.06] via-transparent to-rose-500/[0.05]" />
+      <div className="fixed inset-0 -z-10 bg-surface">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.10] via-transparent to-secondary/[0.08]" />
       </div>
 
       <div className="flex flex-col min-h-screen">
-        <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#070707]/90 backdrop-blur-md">
+        <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md">
           <div className="max-w-3xl mx-auto flex items-center justify-between px-5 py-3">
-            <span className="font-semibold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
-              SiftPlace
+            <span className="flex items-center gap-2">
+              <Logo size={38} />
+              <span className="font-bold text-lg tracking-tight text-primary-dim">SiftPlace</span>
             </span>
-            {tab === "listings" ? (
+            <div className="flex items-center gap-2">
               <button
-                onClick={openFilter}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-white/[0.12] bg-white/[0.03] text-white/75 text-xs font-semibold hover:bg-white/[0.06] transition cursor-pointer"
+                type="button"
+                onClick={() => setDark((d) => !d)}
+                aria-label="Toggle dark mode"
+                className="h-9 w-9 rounded-full bg-surface-c text-ink text-base flex items-center justify-center transition active:scale-90 cursor-pointer"
               >
-                <SlidersHorizontal className="h-3.5 w-3.5" /> Filter
+                {dark ? "☀️" : "🌙"}
               </button>
-            ) : (
-              <span className="w-16" />
-            )}
+              {tab === "listings" && (
+                <button
+                  onClick={openFilter}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full border-2 border-line bg-lowest text-ink text-xs font-bold hover:bg-surface-c transition cursor-pointer"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" /> Filter
+                </button>
+              )}
+            </div>
           </div>
         </header>
 
         <main className="flex-1 max-w-3xl w-full mx-auto px-5 py-6">
-          {tab !== "listings" && <h2 className="text-xl font-bold mb-4">{TAB_TITLES[tab]}</h2>}
+          {tab !== "listings" && <h2 className="text-xl font-bold mb-4 text-ink">{TAB_TITLES[tab]}</h2>}
 
           {tab === "listings" &&
             (status === "loading" ? (
@@ -256,12 +272,12 @@ function App() {
 
       {/* SiftPlace filter overlay */}
       {filterOpen && (
-        <div className="fixed inset-0 z-50 bg-[#030303] overflow-y-auto">
-          <div className="sticky top-0 z-10 flex justify-end px-5 py-3 bg-[#030303]/80 backdrop-blur-md">
+        <div className="fixed inset-0 z-50 bg-surface overflow-y-auto">
+          <div className="sticky top-0 z-10 flex justify-end px-5 py-3 bg-surface/80 backdrop-blur-md">
             <button
               onClick={() => setFilterOpen(false)}
               aria-label="Close filters"
-              className="h-9 w-9 rounded-full border border-white/[0.1] bg-white/[0.03] text-white/60 hover:text-white flex items-center justify-center cursor-pointer"
+              className="h-9 w-9 rounded-full border-2 border-line bg-lowest text-muted hover:text-ink flex items-center justify-center cursor-pointer"
             >
               <X className="h-4 w-4" />
             </button>

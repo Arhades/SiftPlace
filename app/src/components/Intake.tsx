@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Sparkles, Search, MapPin, ArrowRight } from "lucide-react";
+import { Search, MapPin, ArrowRight } from "lucide-react";
+import { Logo } from "@/components/Logo";
 import type { CommuteMode, Weights } from "@/lib/api";
 import { loadCities, searchCities, type CityEntry } from "@/lib/cities";
 import {
@@ -48,9 +49,8 @@ export function defaultIntake(): IntakeValues {
 
 const FEATURED_CITIES = ["Bangkok", "Tokyo", "Seoul", "Singapore"];
 
-const labelCls = "block text-[11px] font-semibold uppercase tracking-wider text-white/45 mb-2";
-const fieldCls =
-  "w-full px-4 py-3 bg-white/[0.03] border border-white/[0.1] rounded-xl text-white placeholder-white/25 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500/60 text-sm";
+const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-muted mb-2";
+const fieldCls = "sf-field";
 
 export function Intake({
   initial,
@@ -113,23 +113,24 @@ export function Intake({
     <form onSubmit={submit} className="max-w-xl mx-auto px-5 py-8 animate-sift-fade">
       {/* header */}
       <div className="text-center mb-8">
-        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-300 text-xs font-semibold mb-4">
-          <Sparkles className="h-3.5 w-3.5" /> SiftPlace filter
+        <span className="inline-flex items-center gap-2 pl-1.5 pr-4 py-1.5 rounded-full bg-lowest border-2 border-line shadow-[0_4px_14px_-8px_rgba(44,22,14,0.35)] text-muted text-xs font-bold mb-4">
+          <Logo size={26} />
+          SiftPlace filter
         </span>
-        <h1 className="text-3xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-white/70">
+        <h1 className="text-3xl font-bold tracking-tight text-ink">
           Filter &amp; rank
         </h1>
-        <p className="mt-2 text-sm text-white/45 max-w-md mx-auto">
+        <p className="mt-2 text-sm text-muted max-w-md mx-auto font-medium">
           Set what matters and we re-rank every listing by its{" "}
-          <span className="text-white/70">true monthly cost</span> — rent plus the Grab/Bolt or
+          <span className="text-ink font-bold">true monthly cost</span> — rent plus the Grab/Bolt or
           motorbike fare it takes to commute — not rent alone.
         </p>
       </div>
 
       {/* weights */}
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 mb-5">
-        <h2 className="text-sm font-bold text-white mb-1">What matters most?</h2>
-        <p className="text-xs text-white/40 mb-5">
+      <section className="sf-well p-5 mb-5">
+        <h2 className="text-base font-bold text-ink mb-1">What matters most?</h2>
+        <p className="text-xs text-muted mb-5 font-medium">
           Spread up to {WEIGHT_CAP} points. More on one means less for the rest — that trade-off is
           what matches you.
         </p>
@@ -137,16 +138,16 @@ export function Intake({
       </section>
 
       {/* practical */}
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 mb-5 space-y-5">
+      <section className="sf-well p-5 mb-5 space-y-5">
         {/* city */}
         <div ref={cityBoxRef} className="relative">
           <label className={labelCls}>Which city are you moving to?</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-white/30">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-muted">
               <Search className="h-4 w-4" />
             </span>
             <input
-              className={cn(fieldCls, "pl-9")}
+              className={cn(fieldCls, "pl-10")}
               value={v.city}
               placeholder="e.g. Bangkok, Tokyo, Lisbon"
               onChange={(e) => onCityType(e.target.value)}
@@ -162,10 +163,10 @@ export function Intake({
                 type="button"
                 onClick={() => pickCity(c)}
                 className={cn(
-                  "px-2.5 py-1 rounded-lg text-[11px] font-medium border transition cursor-pointer",
+                  "px-3 py-1 rounded-full text-[11px] font-bold border-2 transition cursor-pointer",
                   v.city === c
-                    ? "bg-indigo-500/25 border-indigo-500 text-white"
-                    : "bg-white/[0.02] border-white/[0.08] text-white/55 hover:bg-white/[0.04]",
+                    ? "bg-primary/25 border-primary-dim text-ink"
+                    : "bg-lowest border-line text-muted hover:bg-surface-c",
                 )}
               >
                 {c}
@@ -173,17 +174,17 @@ export function Intake({
             ))}
           </div>
           {cityOpen && cityResults.length > 0 && (
-            <div className="absolute z-20 left-0 right-0 mt-1 bg-[#0b0b0b] border border-white/[0.1] rounded-xl overflow-hidden shadow-2xl max-h-52 overflow-y-auto">
+            <div className="absolute z-20 left-0 right-0 mt-1 bg-lowest border border-line rounded-2xl overflow-hidden shadow-[0_10px_30px_-12px_rgba(120,89,0,0.28)] max-h-52 overflow-y-auto">
               {cityResults.map((c) => (
                 <button
                   key={c.label}
                   type="button"
                   onClick={() => pickCity(c.city)}
-                  className="w-full px-3 py-2.5 text-left text-xs text-white/80 hover:bg-white/[0.05] flex items-center gap-2 border-b border-white/[0.03] last:border-0 cursor-pointer"
+                  className="w-full px-3 py-2.5 text-left text-xs text-ink font-semibold hover:bg-surface-c flex items-center gap-2 border-b border-line last:border-0 cursor-pointer"
                 >
                   <span>{c.flag}</span>
                   <span className="truncate">{c.city}</span>
-                  <span className="text-white/30 truncate">· {c.country}</span>
+                  <span className="text-muted truncate">· {c.country}</span>
                 </button>
               ))}
             </div>
@@ -194,17 +195,17 @@ export function Intake({
         <div>
           <label className={labelCls}>Where do you commute to?</label>
           <div className="relative">
-            <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-white/30">
+            <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-muted">
               <MapPin className="h-4 w-4" />
             </span>
             <input
-              className={cn(fieldCls, "pl-9")}
+              className={cn(fieldCls, "pl-10")}
               value={v.destination}
               placeholder="Campus or office (e.g. Chulalongkorn University)"
               onChange={(e) => update({ destination: e.target.value })}
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-white/35">
+          <p className="mt-1.5 text-[11px] text-muted font-medium">
             Your daily destination — we geocode it and weigh the real commute. Leave blank to search
             the city centre.
           </p>
@@ -246,10 +247,10 @@ export function Intake({
                 type="button"
                 onClick={() => update({ maxCommute: o.value })}
                 className={cn(
-                  "py-2 rounded-xl text-xs font-medium border transition cursor-pointer",
+                  "py-2 rounded-full text-xs font-bold border-2 transition cursor-pointer",
                   v.maxCommute === o.value
-                    ? "bg-indigo-500/25 border-indigo-500 text-white"
-                    : "bg-white/[0.02] border-white/[0.08] text-white/55 hover:bg-white/[0.04]",
+                    ? "bg-primary/25 border-primary-dim text-ink"
+                    : "bg-lowest border-line text-muted hover:bg-surface-c",
                 )}
               >
                 {o.label}
@@ -268,16 +269,16 @@ export function Intake({
                 type="button"
                 onClick={() => update({ mode: m.value })}
                 className={cn(
-                  "flex items-center gap-3 p-3 rounded-xl border text-left transition cursor-pointer",
+                  "flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition cursor-pointer",
                   v.mode === m.value
-                    ? "bg-indigo-500/20 border-indigo-500"
-                    : "bg-white/[0.02] border-white/[0.08] hover:bg-white/[0.04]",
+                    ? "bg-primary/20 border-primary-dim"
+                    : "bg-lowest border-line hover:bg-surface-c",
                 )}
               >
                 <span className="text-2xl">{m.icon}</span>
                 <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-white">{m.label}</span>
-                  <span className="block text-[11px] text-white/45">{m.hint}</span>
+                  <span className="block text-sm font-bold text-ink">{m.label}</span>
+                  <span className="block text-[11px] text-muted font-medium">{m.hint}</span>
                 </span>
               </button>
             ))}
@@ -287,9 +288,9 @@ export function Intake({
         {/* value of time */}
         <div>
           <div className="flex items-center justify-between">
-            <label className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
+            <label className="text-[11px] font-bold uppercase tracking-wider text-muted">
               Value your time?{" "}
-              <span className="normal-case font-normal text-white/30">(optional)</span>
+              <span className="normal-case font-medium text-muted/70">(optional)</span>
             </label>
             <button
               type="button"
@@ -298,12 +299,12 @@ export function Intake({
               onClick={() => update({ valueOfTime: timeOn ? 0 : 150 })}
               className={cn(
                 "relative h-6 w-11 rounded-full transition cursor-pointer",
-                timeOn ? "bg-indigo-500" : "bg-white/[0.12]",
+                timeOn ? "bg-primary-dim" : "bg-surface-high",
               )}
             >
               <span
                 className={cn(
-                  "absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all",
+                  "absolute top-0.5 h-5 w-5 rounded-full bg-lowest shadow transition-all",
                   timeOn ? "left-[22px]" : "left-0.5",
                 )}
               />
@@ -311,7 +312,7 @@ export function Intake({
           </div>
           {timeOn && (
             <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-white/50">฿</span>
+              <span className="text-xs text-muted font-bold">฿</span>
               <input
                 type="number"
                 min={0}
@@ -320,17 +321,17 @@ export function Intake({
                 value={v.valueOfTime}
                 onChange={(e) => update({ valueOfTime: Math.max(0, Number(e.target.value)) })}
               />
-              <span className="text-xs text-white/50">per hour of commuting</span>
+              <span className="text-xs text-muted font-medium">per hour of commuting</span>
             </div>
           )}
-          <p className="mt-1.5 text-[11px] text-white/35">
+          <p className="mt-1.5 text-[11px] text-muted font-medium">
             We'll add a "true cost incl. time" so ranking weighs hours, not just baht.
           </p>
         </div>
       </section>
 
       {/* preferences */}
-      <section className="rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 mb-5 space-y-5">
+      <section className="sf-well p-5 mb-5 space-y-5">
         <div>
           <label className={labelCls}>What do you want nearby?</label>
           <ChipSelect multiple options={NEARBY_OPTIONS} value={v.nearby} onChange={(n) => update({ nearby: n })} />
@@ -357,7 +358,7 @@ export function Intake({
       <button
         type="submit"
         disabled={over}
-        className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-indigo-500 to-rose-500 hover:from-indigo-600 hover:to-rose-600 text-white font-semibold text-sm transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shadow-lg shadow-indigo-500/20 active:scale-[0.99]"
+        className="sf-cta w-full flex items-center justify-center gap-2 py-3.5 text-base cursor-pointer"
       >
         {over ? (
           "Ease your priorities to 20 or less"

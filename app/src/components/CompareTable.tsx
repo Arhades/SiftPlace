@@ -64,17 +64,17 @@ function bestIndex(row: Row, items: ListingResult[]): number | null {
 
 export function CompareTable({ items }: { items: ListingResult[] }) {
   return (
-    <div className="overflow-x-auto rounded-2xl border border-white/[0.08]">
+    <div className="overflow-x-auto rounded-2xl border border-line">
       <table className="w-full text-sm border-collapse">
         <thead>
-          <tr className="border-b border-white/[0.08]">
-            <th className="sticky left-0 z-10 bg-[#0a0a0a] text-left text-[11px] uppercase tracking-wider text-white/40 font-semibold p-3 min-w-32">
+          <tr className="border-b border-line">
+            <th className="sticky left-0 z-10 bg-surface-c text-left text-[11px] uppercase tracking-wider text-muted font-bold p-3 min-w-32">
               Metric
             </th>
             {items.map((r, i) => (
-              <th key={r.name + i} className="text-left p-3 min-w-44 align-top">
-                <div className="text-white font-semibold leading-tight">{r.name}</div>
-                <div className="text-[11px] text-white/40 mt-0.5">{r.area || r.type || "—"}</div>
+              <th key={r.name + i} className="text-left p-3 min-w-44 align-top bg-lowest">
+                <div className="text-ink font-bold leading-tight">{r.name}</div>
+                <div className="text-[11px] text-muted mt-0.5 font-medium">{r.area || r.type || "—"}</div>
               </th>
             ))}
           </tr>
@@ -83,16 +83,16 @@ export function CompareTable({ items }: { items: ListingResult[] }) {
           {ROWS.map((row) => {
             const bi = bestIndex(row, items);
             return (
-              <tr key={row.label} className="border-b border-white/[0.05] last:border-0">
-                <td className="sticky left-0 z-10 bg-[#0a0a0a] text-[11px] uppercase tracking-wider text-white/45 font-semibold p-3">
+              <tr key={row.label} className="border-b border-line last:border-0">
+                <td className="sticky left-0 z-10 bg-surface-c text-[11px] uppercase tracking-wider text-muted font-bold p-3">
                   {row.label}
                 </td>
                 {items.map((r, i) => (
                   <td
                     key={r.name + i}
                     className={cn(
-                      "p-3 text-white/80 whitespace-nowrap",
-                      bi === i && "text-emerald-300 font-semibold",
+                      "p-3 text-ink whitespace-nowrap bg-lowest font-medium",
+                      bi === i && "text-ok font-bold",
                     )}
                   >
                     {row.value(r)}

@@ -13,9 +13,9 @@ import {
 } from "@/lib/fare";
 
 const LEVEL_STYLE: Record<"low" | "moderate" | "high", string> = {
-  low: "bg-emerald-500/15 text-emerald-300",
-  moderate: "bg-amber-500/15 text-amber-300",
-  high: "bg-rose-500/15 text-rose-300",
+  low: "bg-ok-soft text-ok",
+  moderate: "bg-warn-soft text-warn",
+  high: "bg-error-soft text-error",
 };
 
 const SUBSCORE_META: { key: "cost" | "location" | "living"; label: string }[] = [
@@ -44,24 +44,24 @@ export function ResultCard({
   return (
     <article
       className={cn(
-        "rounded-2xl border bg-white/[0.02] p-5 animate-sift-fade",
+        "sf-card p-5 animate-sift-fade",
         isTop
-          ? "border-indigo-500/40 shadow-[0_8px_40px_-12px_rgba(99,102,241,0.45)]"
-          : "border-white/[0.08]",
+          ? "border-primary/60 shadow-[0_14px_34px_-14px_rgba(255,193,7,0.55)]"
+          : "",
       )}
     >
       {/* header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 text-white text-xs font-bold">
+          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-surface text-xs font-bold">
             ★ {r.score}% match
           </span>
           {isTop ? (
-            <span className="px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-300 text-[11px] font-semibold">
+            <span className="px-2.5 py-1 rounded-full bg-primary text-on-primary text-[11px] font-bold">
               ⭐ Top pick
             </span>
           ) : r.score >= 80 ? (
-            <span className="px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-300 text-[11px] font-semibold">
+            <span className="px-2.5 py-1 rounded-full bg-ok-soft text-ok text-[11px] font-bold">
               Great fit
             </span>
           ) : null}
@@ -71,19 +71,19 @@ export function ResultCard({
           onClick={() => onToggleSave(r)}
           aria-label={saved ? "Remove from saved" : "Save"}
           className={cn(
-            "h-9 w-9 rounded-full border flex items-center justify-center transition cursor-pointer shrink-0",
+            "h-9 w-9 rounded-full border-2 flex items-center justify-center transition cursor-pointer shrink-0",
             saved
-              ? "bg-rose-500/20 border-rose-500/40 text-rose-400"
-              : "bg-white/[0.03] border-white/[0.1] text-white/40 hover:text-white/70",
+              ? "bg-secondary/20 border-secondary/50 text-secondary"
+              : "bg-lowest border-line text-muted hover:text-ink",
           )}
         >
-          <Heart className={cn("h-4 w-4", saved && "fill-rose-500")} />
+          <Heart className={cn("h-4 w-4", saved && "fill-secondary")} />
         </button>
       </div>
 
       {/* title */}
-      <h3 className="mt-3 text-lg font-semibold text-white leading-tight">{r.name}</h3>
-      <div className="mt-1 flex items-center gap-1.5 text-xs text-white/45">
+      <h3 className="mt-3 text-lg font-bold text-ink leading-tight">{r.name}</h3>
+      <div className="mt-1 flex items-center gap-1.5 text-xs text-muted font-medium">
         <MapPin className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">
           {meta}
@@ -92,9 +92,9 @@ export function ResultCard({
       </div>
 
       {/* true cost block — the headline */}
-      <div className="mt-4 rounded-xl bg-white/[0.03] border border-white/[0.06] p-4">
+      <div className="mt-4 rounded-2xl bg-surface-low border border-line p-4">
         <div className="flex items-center justify-between">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-white/45">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted">
             True monthly cost
           </span>
           <span className={cn("text-[10px] font-bold px-2 py-0.5 rounded-full", LEVEL_STYLE[level])}>
@@ -104,43 +104,43 @@ export function ResultCard({
 
         {r.price_known && r.true_cost != null ? (
           <>
-            <div className="mt-1.5 text-2xl font-bold text-white">
+            <div className="mt-1.5 text-2xl font-bold text-ink">
               {fmtTHB(r.true_cost)}{" "}
-              <span className="text-xs font-medium text-white/40">/mo all-in</span>
+              <span className="text-xs font-semibold text-muted">/mo all-in</span>
             </div>
-            <div className="mt-0.5 text-xs text-white/50">
+            <div className="mt-0.5 text-xs text-muted font-medium">
               {fmtTHB(r.rent)} rent + ~{fmtTHB(r.monthly_fare)} {MODE_LABEL[mode]}
             </div>
           </>
         ) : (
           <>
-            <div className="mt-1.5 text-2xl font-bold text-white">Price on request</div>
-            <div className="mt-0.5 text-xs text-white/50">
+            <div className="mt-1.5 text-2xl font-bold text-ink">Price on request</div>
+            <div className="mt-0.5 text-xs text-muted font-medium">
               + ~{fmtTHB(r.monthly_fare)} {MODE_LABEL[mode]} fare. Rent isn't in free OSM data yet.
             </div>
           </>
         )}
 
-        <div className="mt-3 flex items-center gap-1.5 text-xs text-white/55">
-          <Clock className="h-3.5 w-3.5 text-white/40 shrink-0" />~{fmtHours(r.monthly_hours)}/mo on the road
+        <div className="mt-3 flex items-center gap-1.5 text-xs text-muted font-medium">
+          <Clock className="h-3.5 w-3.5 text-muted shrink-0" />~{fmtHours(r.monthly_hours)}/mo on the road
         </div>
 
         {r.time_cost != null && (
-          <div className="mt-1 text-xs text-indigo-300/90">
+          <div className="mt-1 text-xs text-secondary-dim font-semibold">
             {r.true_cost_incl_time != null ? (
               <>
-                Incl. your time: <span className="font-semibold">{fmtTHB(r.true_cost_incl_time)}/mo</span>
+                Incl. your time: <span className="font-bold">{fmtTHB(r.true_cost_incl_time)}/mo</span>
               </>
             ) : (
               <>
-                Your commute time ≈ <span className="font-semibold">{fmtTHB(r.time_cost)}/mo</span>
+                Your commute time ≈ <span className="font-bold">{fmtTHB(r.time_cost)}/mo</span>
               </>
             )}
           </div>
         )}
 
         {otherFare && (
-          <div className="mt-2 pt-2 border-t border-white/[0.06] text-[11px] text-white/40">
+          <div className="mt-2 pt-2 border-t border-line text-[11px] text-muted font-medium">
             vs {MODE_SHORT[other]}: ~{fmtTHB(otherFare.monthly_fare_thb)}/mo · {fmtHours(otherFare.monthly_hours)}/mo
           </div>
         )}
@@ -149,14 +149,14 @@ export function ResultCard({
       {/* tags */}
       <div className="mt-3 flex flex-wrap gap-1.5">
         {r.vibe && (
-          <span className="text-[11px] font-medium px-2 py-1 rounded-lg bg-white/[0.04] text-white/60">
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-c text-ink">
             {r.vibe === "quiet" ? "🌿 quiet" : "✨ lively"}
           </span>
         )}
         {r.met_nearby.map((m) => (
           <span
             key={m}
-            className="text-[11px] font-medium px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-300"
+            className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-ok-soft text-ok"
           >
             📍 {m.replace(/_/g, " ")}
           </span>
@@ -164,7 +164,7 @@ export function ResultCard({
         {r.matched_amenities.map((a) => (
           <span
             key={a}
-            className="text-[11px] font-medium px-2 py-1 rounded-lg bg-white/[0.04] text-white/60"
+            className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-c text-ink"
           >
             {a}
           </span>
@@ -177,13 +177,13 @@ export function ResultCard({
           const pct = Math.round((r.subscores[key] ?? 0) * 100);
           return (
             <div key={key}>
-              <div className="flex items-center justify-between text-[10px] text-white/40 mb-1">
-                <span className="uppercase tracking-wide">{label}</span>
-                <span className="text-white/55 font-semibold">{pct}</span>
+              <div className="flex items-center justify-between text-[10px] text-muted mb-1">
+                <span className="uppercase tracking-wide font-bold">{label}</span>
+                <span className="text-ink font-bold">{pct}</span>
               </div>
-              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+              <div className="h-2 rounded-full bg-surface-high overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+                  className="h-full rounded-full bg-gradient-to-r from-primary to-primary-dim"
                   style={{ width: `${pct}%` }}
                 />
               </div>
@@ -194,9 +194,9 @@ export function ResultCard({
 
       {/* review */}
       {r.reviews.length > 0 && (
-        <p className="mt-4 text-sm text-white/55 italic leading-relaxed">
+        <p className="mt-4 text-sm text-muted italic leading-relaxed font-medium">
           "{r.reviews[0].text}"
-          <span className="not-italic text-amber-300 ml-1">
+          <span className="not-italic text-primary-dim ml-1">
             {"★".repeat(Math.max(0, Math.min(5, r.reviews[0].stars)))}
           </span>
         </p>
@@ -207,7 +207,7 @@ export function ResultCard({
         href={osmLink(r.lat, r.lon)}
         target="_blank"
         rel="noopener noreferrer"
-        className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-300 hover:text-indigo-200"
+        className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-secondary-dim hover:text-secondary"
       >
         <MapIcon className="h-3.5 w-3.5" /> View on map
       </a>

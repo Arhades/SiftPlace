@@ -1,11 +1,67 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
-@layer base {
-  :root {
-    --radius: 0.75rem;
-  }
+/* ============================================================
+   SiftPlace — "Solar Friend" design tokens (ported from frontend/prototype.html)
+   Warm, playful, squishy. Light default + optional dark theme.
+   ============================================================ */
+:root {
+  --surface:#fff8f6; --surface-low:#fff1ed; --surface-c:#ffe9e3; --surface-high:#ffe2da;
+  --lowest:#ffffff;
+  --ink:#2c160e; --muted:#5b5440; --line:#e7d8c2;
+  --primary:#ffc107; --primary-dim:#e0a800; --on-primary:#3a2a00;
+  --secondary:#fe6f42; --secondary-dim:#d9531f; --on-secondary:#ffffff;
+  --tertiary:#00629d; --tertiary-c:#cfe5ff; --on-tertiary:#00598f;
+  --ok:#1f8a4c; --ok-soft:#e3f5e9;
+  --warn:#b15c00; --warn-soft:#fff0d6;
+  --error:#ba1a1a; --error-soft:#ffdad6;
+  --page:#f3e7df;
+  --shadow:0 10px 30px -12px rgba(120,89,0,.28);
+  --shadow-sm:0 4px 14px -8px rgba(44,22,14,.35);
+}
+:root[data-theme="dark"] {
+  --surface:#17130f; --surface-low:#1f1a15; --surface-c:#2a231c; --surface-high:#352c23;
+  --lowest:#221c17;
+  --ink:#f3ece4; --muted:#c4b6a6; --line:#3c332a;
+  --primary:#ffc107; --primary-dim:#ffcf3a; --on-primary:#3a2a00;
+  --secondary:#ff8a63; --secondary-dim:#d9531f; --on-secondary:#1a0f0c;
+  --tertiary:#8ec5ff; --tertiary-c:#16304a; --on-tertiary:#cfe5ff;
+  --ok:#5fd08a; --ok-soft:#15301f;
+  --warn:#ffc06b; --warn-soft:#3a2c12;
+  --error:#ffb4ab; --error-soft:#3a1714;
+  --page:#0e0b09;
+  --shadow:0 12px 34px -14px rgba(0,0,0,.6);
+  --shadow-sm:0 6px 18px -10px rgba(0,0,0,.7);
+}
+
+/* Expose the palette to Tailwind so `bg-surface`, `text-ink`, `border-line`, … work */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-surface-low: var(--surface-low);
+  --color-surface-c: var(--surface-c);
+  --color-surface-high: var(--surface-high);
+  --color-lowest: var(--lowest);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-primary: var(--primary);
+  --color-primary-dim: var(--primary-dim);
+  --color-on-primary: var(--on-primary);
+  --color-secondary: var(--secondary);
+  --color-secondary-dim: var(--secondary-dim);
+  --color-on-secondary: var(--on-secondary);
+  --color-tertiary: var(--tertiary);
+  --color-tertiary-c: var(--tertiary-c);
+  --color-on-tertiary: var(--on-tertiary);
+  --color-ok: var(--ok);
+  --color-ok-soft: var(--ok-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-error: var(--error);
+  --color-error-soft: var(--error-soft);
+  --color-page: var(--page);
+  --font-display: 'Quicksand', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 }
 
 html {
@@ -13,72 +69,73 @@ html {
 }
 
 body {
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  background-color: #030303;
-  color: #ffffff;
+  font-family: 'Quicksand', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background-color: var(--page);
+  color: var(--ink);
   overflow-x: hidden;
   margin: 0;
   padding: 0;
   -webkit-font-smoothing: antialiased;
+  transition: background-color .25s, color .25s;
 }
 
 /* Hide scrollbar utility (Chrome/Safari/Opera + Firefox/IE) */
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* Dark thin scrollbar for the rest of the app */
+/* Warm thin scrollbar for the rest of the app */
 *::-webkit-scrollbar { width: 10px; height: 10px; }
-*::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.12); border-radius: 999px; }
+*::-webkit-scrollbar-thumb { background: var(--surface-high); border-radius: 999px; }
 *::-webkit-scrollbar-track { background: transparent; }
 
-/* ---- Weight sliders (indigo), ported & recoloured from frontend/prototype.html ---- */
+/* ---- Weight sliders (amber), ported from frontend/prototype.html ---- */
 input[type="range"].sift-slider {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
-  height: 26px;
+  height: 30px;
   background: transparent;
   cursor: pointer;
   --pct: 0;
   margin: 0;
 }
 input[type="range"].sift-slider::-webkit-slider-runnable-track {
-  height: 8px;
+  height: 12px;
   border-radius: 999px;
   background: linear-gradient(
     90deg,
-    #6366f1 calc(var(--pct) * 1%),
-    rgba(255, 255, 255, 0.1) calc(var(--pct) * 1%)
+    var(--primary-dim) calc(var(--pct) * 1%),
+    var(--surface-high) calc(var(--pct) * 1%)
   );
 }
 input[type="range"].sift-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
-  background: #a5b4fc;
-  border: 3px solid #0b0b12;
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.6);
+  background: var(--primary-dim);
+  border: 4px solid var(--surface);
+  box-shadow: 0 3px 8px rgba(120, 89, 0, 0.45);
   margin-top: -6px;
 }
 input[type="range"].sift-slider::-moz-range-track {
-  height: 8px;
+  height: 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--surface-high);
 }
 input[type="range"].sift-slider::-moz-range-progress {
-  height: 8px;
+  height: 12px;
   border-radius: 999px;
-  background: #6366f1;
+  background: var(--primary-dim);
 }
 input[type="range"].sift-slider::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
-  border: 3px solid #0b0b12;
+  width: 24px;
+  height: 24px;
+  border: 4px solid var(--surface);
   border-radius: 50%;
-  background: #a5b4fc;
-  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.6);
+  background: var(--primary-dim);
+  box-shadow: 0 3px 8px rgba(120, 89, 0, 0.45);
 }
 
 /* number inputs: hide spinners for a cleaner look */
@@ -91,3 +148,50 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   to { opacity: 1; transform: none; }
 }
 .animate-sift-fade { animation: sift-fade 0.3s ease both; }
+
+/* ============================================================
+   Signature "squishy" component classes (from prototype.html)
+   Kept in the components layer so Tailwind utilities (padding,
+   radius, colour overrides) still win when combined on an element.
+   ============================================================ */
+@layer components {
+  /* Primary squishy CTA — solid amber, chunky 3D drop */
+  .sf-cta {
+    background: var(--primary); color: var(--on-primary);
+    font-weight: 700; border-radius: 18px;
+    box-shadow: 0 5px 0 var(--primary-dim);
+    transition: transform .08s, box-shadow .08s, filter .15s;
+  }
+  .sf-cta:hover { filter: brightness(1.03); }
+  .sf-cta:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--primary-dim); }
+  .sf-cta:disabled { opacity: .55; cursor: not-allowed; }
+
+  /* Pill text field */
+  .sf-field {
+    width: 100%; font-family: inherit; font-size: 15px; font-weight: 600;
+    color: var(--ink); background: var(--lowest);
+    border: 2px solid var(--line); border-radius: 999px;
+    padding: 12px 16px; outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  .sf-field::placeholder { color: color-mix(in srgb, var(--muted) 60%, transparent); font-weight: 500; }
+  .sf-field:focus { border-color: var(--primary); background: var(--surface-low); }
+
+  /* Sunken "well" group card */
+  .sf-well {
+    background: var(--surface-low); border: 1px solid var(--line);
+    border-radius: 24px;
+  }
+
+  /* Card surface */
+  .sf-card {
+    background: var(--lowest); border: 1px solid var(--line);
+    border-radius: 24px; box-shadow: var(--shadow-sm);
+  }
+
+  /* Mascot sun avatar ring */
+  .sf-avatar {
+    background: radial-gradient(circle at 50% 38%, #fff3cf, #ffe08a);
+    border: 2.5px solid var(--primary-dim);
+  }
+}

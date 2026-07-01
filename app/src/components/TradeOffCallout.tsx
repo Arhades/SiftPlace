@@ -19,22 +19,22 @@ export function TradeOffCallout({
   const { near, far, fareDiff, hoursDiff, rentKnown, netSaving, rentPremium, breakEvenDays } = data;
 
   return (
-    <div className="rounded-2xl border border-indigo-500/20 bg-gradient-to-tr from-indigo-500/[0.07] via-white/[0.01] to-rose-500/[0.07] p-5 animate-sift-fade">
+    <div className="rounded-2xl border border-tertiary/30 bg-tertiary-c/50 p-5 animate-sift-fade">
       <div className="flex items-center gap-2 mb-2">
         <span className="text-base">💡</span>
-        <h3 className="text-sm font-bold text-white">The distance trade-off</h3>
+        <h3 className="text-sm font-bold text-ink">The distance trade-off</h3>
       </div>
 
-      <p className="text-sm text-white/70 leading-relaxed">
-        <span className="font-semibold text-white">{near.name}</span> is ~{near.commute_min} min away;{" "}
-        <span className="font-semibold text-white">{far.name}</span> is ~{far.commute_min} min. Living
+      <p className="text-sm text-ink/80 leading-relaxed font-medium">
+        <span className="font-bold text-ink">{near.name}</span> is ~{near.commute_min} min away;{" "}
+        <span className="font-bold text-ink">{far.name}</span> is ~{far.commute_min} min. Living
         closer saves about{" "}
-        <span className="font-semibold text-indigo-300">{fmtTHB(fareDiff)}/mo</span> in {MODE_LABEL[mode]}{" "}
+        <span className="font-bold text-secondary-dim">{fmtTHB(fareDiff)}/mo</span> in {MODE_LABEL[mode]}{" "}
         fares
         {hoursDiff > 0 && (
           <>
             {" "}
-            and <span className="font-semibold text-indigo-300">~{fmtHours(hoursDiff)}/mo</span> of your
+            and <span className="font-bold text-secondary-dim">~{fmtHours(hoursDiff)}/mo</span> of your
             time
           </>
         )}
@@ -42,17 +42,17 @@ export function TradeOffCallout({
       </p>
 
       {rentKnown && netSaving != null && (
-        <p className="mt-2 text-sm text-white/70 leading-relaxed">
+        <p className="mt-2 text-sm text-ink/80 leading-relaxed font-medium">
           {netSaving > 0 ? (
             <>
-              All-in, <span className="font-semibold text-white">{near.name}</span> still wins by{" "}
-              <span className="font-semibold text-emerald-300">{fmtTHB(netSaving)}/mo</span> once the
+              All-in, <span className="font-bold text-ink">{near.name}</span> still wins by{" "}
+              <span className="font-bold text-ok">{fmtTHB(netSaving)}/mo</span> once the
               commute is counted.
             </>
           ) : netSaving < 0 ? (
             <>
-              Even with the fare, <span className="font-semibold text-white">{far.name}</span> is{" "}
-              <span className="font-semibold text-emerald-300">{fmtTHB(-netSaving)}/mo</span> cheaper
+              Even with the fare, <span className="font-bold text-ink">{far.name}</span> is{" "}
+              <span className="font-bold text-ok">{fmtTHB(-netSaving)}/mo</span> cheaper
               all-in — the farther place wins on money, but costs you the extra time.
             </>
           ) : (
@@ -62,12 +62,12 @@ export function TradeOffCallout({
       )}
 
       {rentKnown && breakEvenDays != null && rentPremium != null && rentPremium > 0 && (
-        <p className="mt-2 text-xs text-white/45">
+        <p className="mt-2 text-xs text-muted font-medium">
           Break-even: paying {fmtTHB(rentPremium)} more to live at {near.name} pays for itself if you
           commute{" "}
           {breakEvenDays <= 7 ? (
             <>
-              ≥ <span className="font-semibold text-white/70">{breakEvenDays} days/week</span>.
+              ≥ <span className="font-bold text-ink">{breakEvenDays} days/week</span>.
             </>
           ) : (
             <>

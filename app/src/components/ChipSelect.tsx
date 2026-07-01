@@ -42,10 +42,10 @@ export function ChipSelect(props: Props) {
             onClick={() => toggle(opt.value)}
             aria-pressed={on}
             className={cn(
-              "px-3.5 py-2 rounded-xl border text-xs font-medium transition-all cursor-pointer active:scale-[0.97]",
+              "px-3.5 py-2 rounded-full border-2 text-sm font-bold transition-all cursor-pointer active:scale-[0.95]",
               on
-                ? "bg-indigo-500/25 border-indigo-500 text-white"
-                : "bg-white/[0.02] border-white/[0.08] text-white/60 hover:bg-white/[0.05]",
+                ? "bg-primary border-primary-dim text-on-primary shadow-[0_3px_0_var(--primary-dim)]"
+                : "bg-lowest border-line text-ink hover:bg-surface-c",
             )}
           >
             {opt.label}
