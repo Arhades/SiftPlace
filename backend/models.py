@@ -1,6 +1,8 @@
 """Pydantic request/response models for the SiftPlace API."""
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -24,6 +26,11 @@ class ScoreRequest(BaseModel):
     vibe: str | None = Field(None, description="quiet or lively (or omit)")
     types: list[str] = Field(default_factory=list, description="condo, hotel, hostel")
     amenities: list[str] = Field(default_factory=list)
+    commute_mode: Literal["car", "bike"] = Field(
+        "car", description="Ride-hailing car (Grab/Bolt) or motorbike taxi — drives the fare")
+    provider: Literal["grab", "bolt"] = Field("grab", description="Fare rate table to use")
+    value_of_time: int = Field(
+        0, ge=0, description="THB/hour you put on commute time; 0 = ignore time in ranking")
     top_n: int = Field(5, ge=1, le=20)
 
 
@@ -43,6 +50,11 @@ class CityScoreRequest(BaseModel):
     vibe: str | None = None
     types: list[str] = Field(default_factory=list)
     amenities: list[str] = Field(default_factory=list)
+    commute_mode: Literal["car", "bike"] = Field(
+        "car", description="Ride-hailing car (Grab/Bolt) or motorbike taxi — drives the fare")
+    provider: Literal["grab", "bolt"] = Field("grab", description="Fare rate table to use")
+    value_of_time: int = Field(
+        0, ge=0, description="THB/hour you put on commute time; 0 = ignore time in ranking")
     radius_m: int = Field(2500, ge=500, le=8000, description="Search radius around the centre")
     max_listings: int = Field(30, ge=1, le=60)
     top_n: int = Field(5, ge=1, le=20)
@@ -54,9 +66,18 @@ class ListingResult(BaseModel):
     score: int
     rent: int | None = None
     true_cost: int | None = None
+    true_cost_incl_time: int | None = None
     price_known: bool = True
     commute_min: int
     commute_cost: int | None = None
+    mode: str = "car"
+    one_way_fare: int | None = None
+    monthly_fare: int | None = None
+    monthly_hours: float = 0
+    time_cost: int | None = None
+    # Per-mode fare summary ({car:{...}, bike:{...}}) so the UI can compare/toggle
+    # without a refetch. Each value: {one_way_thb, one_way_min, monthly_fare_thb, monthly_hours}.
+    fares: dict = Field(default_factory=dict)
     met_nearby: list[str] = Field(default_factory=list)
     vibe: str | None = None
     type: str | None = None

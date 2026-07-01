@@ -15,6 +15,8 @@ from __future__ import annotations
 import math
 from typing import Any
 
+from fare import both_modes
+
 
 # --- geo + commute -----------------------------------------------------------
 
@@ -28,16 +30,9 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
     return 2 * R * math.asin(math.sqrt(a))
 
 
-def estimate_commute(dist_km: float, days_per_week: int) -> tuple[int, int]:
-    """Rough monthly commute estimate -> (minutes_one_way, monthly_cost).
-
-    Deliberately simple and clearly an *estimate*. Replace later with a real
-    routing API (e.g. free OpenRouteService) for door-to-door time/cost.
-    """
-    minutes = (dist_km * 1.3) / 15 * 60          # ~15 km/h effective speed, 1.3 detour factor
-    oneway_cost = 20 + 10 * dist_km              # base fare + per-km (currency-agnostic units)
-    monthly_cost = oneway_cost * 2 * days_per_week * 4.3
-    return round(minutes), round(monthly_cost)
+# Commute time + cost now come from the transparent fare model in fare.py
+# (base + per-km + per-min, separate rates for ride-hailing car vs motorbike taxi),
+# so the headline trade-off is calibrated to real Bangkok rates, not generic units.
 
 
 # --- helpers -----------------------------------------------------------------
@@ -63,18 +58,37 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
     Tolerant of missing fields: unknown price/amenities/space/vibe fall back to
     neutral scores so real (OSM) listings still rank fairly.
     """
-    # 1) commute + true cost
+    # 1) commute time + fare for BOTH modes (transparent fare model in fare.py),
+    #    then pick the user's chosen mode for ranking. Returning both lets the UI
+    #    flip car<->bike instantly without recomputing rates client-side.
     dist_km = haversine_m(
         listing["lat"], listing["lon"], prefs["anchor"][0], prefs["anchor"][1]
     ) / 1000
-    commute_min, commute_cost = estimate_commute(dist_km, prefs.get("commute_days", 5))
+    days = prefs.get("commute_days", 5)
+    provider = prefs.get("provider", "grab")
+    mode = prefs.get("commute_mode", "car")
+    vot = prefs.get("value_of_time", 0) or 0
+    fares = both_modes(dist_km, days, provider)
+    chosen = fares.get(mode, fares["car"])
+    commute_min = chosen["one_way_min"]
+    one_way_fare = chosen["one_way_thb"]
+    monthly_fare = chosen["monthly_fare_thb"]
+    monthly_hours = chosen["monthly_hours"]
+    commute_cost = monthly_fare  # back-compat field name (= chosen mode's monthly fare)
 
-    # 2) cost score — only meaningful if we know the price
+    # value-of-time: money the user puts on the hours spent commuting (optional)
+    time_cost = round(monthly_hours * vot) if vot > 0 else None
+
+    # 2) cost score — only meaningful if we know the price. True cost = rent +
+    #    monthly fare; when the user values their time, fold time_cost in so the
+    #    ranking weighs hours, not only baht.
     price = listing.get("price")
     price_known = price is not None
     if price_known:
-        true_cost = price + commute_cost
-        ratio = true_cost / max(prefs["budget"], 1)
+        true_cost = price + monthly_fare
+        true_cost_incl_time = true_cost + time_cost if time_cost is not None else None
+        budget_basis = true_cost_incl_time if true_cost_incl_time is not None else true_cost
+        ratio = budget_basis / max(prefs["budget"], 1)
         if ratio <= 0.8:
             cost_s = 1.0
         elif ratio >= 1.2:
@@ -83,6 +97,7 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
             cost_s = clamp(1 - (ratio - 0.8) / 0.4 * 0.9, 0.1, 1.0)
     else:
         true_cost = None
+        true_cost_incl_time = None
         cost_s = 0.5  # neutral — OSM data has no rent price
 
     # 3) location score — nearby wants + safety + quiet/lively match
@@ -130,9 +145,16 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
         "score": round(total * 100),
         "rent": price,
         "true_cost": true_cost,
+        "true_cost_incl_time": true_cost_incl_time,
         "price_known": price_known,
         "commute_min": commute_min,
         "commute_cost": commute_cost,
+        "mode": mode,
+        "one_way_fare": one_way_fare,
+        "monthly_fare": monthly_fare,
+        "monthly_hours": monthly_hours,
+        "time_cost": time_cost,
+        "fares": fares,
         "met_nearby": met,
         "vibe": vibe,
         "type": listing.get("type"),

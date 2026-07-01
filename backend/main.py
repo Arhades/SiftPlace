@@ -69,6 +69,9 @@ def score(req: ScoreRequest):
         "vibe": req.vibe,
         "types": req.types,
         "amenities": req.amenities,
+        "commute_mode": req.commute_mode,
+        "provider": req.provider,
+        "value_of_time": req.value_of_time,
     }
     results = rank_listings(LISTINGS, prefs, top_n=req.top_n)
     return {"count": len(results), "results": results}
@@ -92,6 +95,9 @@ def search(req: CityScoreRequest):
         "vibe": req.vibe,
         "types": req.types,
         "amenities": req.amenities,
+        "commute_mode": req.commute_mode,
+        "provider": req.provider,
+        "value_of_time": req.value_of_time,
         "top_n": req.top_n,
     }
     out = build_and_score(prefs, city=req.city,
