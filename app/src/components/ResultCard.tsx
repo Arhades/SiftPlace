@@ -1,5 +1,6 @@
 import { MapPin, Clock, Heart, Map as MapIcon } from "lucide-react";
-import type { ListingResult } from "@/lib/api";
+import type { Badge, ListingResult } from "@/lib/api";
+import { fmtMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import {
   COMMUTE_LEVEL_TEXT,
@@ -7,15 +8,22 @@ import {
   MODE_SHORT,
   commuteLevel,
   fmtHours,
-  fmtTHB,
   osmLink,
   otherMode,
 } from "@/lib/fare";
+import { PriceCompare } from "./PriceCompare";
 
 const LEVEL_STYLE: Record<"low" | "moderate" | "high", string> = {
   low: "bg-ok-soft text-ok",
   moderate: "bg-warn-soft text-warn",
   high: "bg-error-soft text-error",
+};
+
+// Spread badges — the ranked list is guaranteed to include these trade-off picks.
+const BADGE_META: Record<Badge, { label: string; cls: string } | null> = {
+  top_match: null, // rendered as the existing "Top pick" chip via isTop
+  best_value: { label: "💸 Best value further out", cls: "bg-tertiary-c text-on-tertiary" },
+  best_quality: { label: "✨ Best quality", cls: "bg-secondary/20 text-secondary-dim" },
 };
 
 const SUBSCORE_META: { key: "cost" | "location" | "living"; label: string }[] = [
@@ -28,11 +36,13 @@ export function ResultCard({
   r,
   isTop,
   saved,
+  currency = "THB",
   onToggleSave,
 }: {
   r: ListingResult;
   isTop: boolean;
   saved: boolean;
+  currency?: string;
   onToggleSave: (listing: ListingResult) => void;
 }) {
   const mode = r.mode;
@@ -65,6 +75,16 @@ export function ResultCard({
               Great fit
             </span>
           ) : null}
+          {r.badge && BADGE_META[r.badge] && (
+            <span
+              className={cn(
+                "px-2.5 py-1 rounded-full text-[11px] font-bold",
+                BADGE_META[r.badge]!.cls,
+              )}
+            >
+              {BADGE_META[r.badge]!.label}
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -82,7 +102,14 @@ export function ResultCard({
       </div>
 
       {/* title */}
-      <h3 className="mt-3 text-lg font-bold text-ink leading-tight">{r.name}</h3>
+      <h3 className="mt-3 text-lg font-bold text-ink leading-tight">
+        {r.name}
+        {r.stars != null && r.stars > 0 && (
+          <span className="ml-1.5 text-xs font-bold text-primary-dim align-middle">
+            {"★".repeat(Math.max(1, Math.min(5, Math.round(r.stars))))}
+          </span>
+        )}
+      </h3>
       <div className="mt-1 flex items-center gap-1.5 text-xs text-muted font-medium">
         <MapPin className="h-3.5 w-3.5 shrink-0" />
         <span className="truncate">
@@ -105,18 +132,25 @@ export function ResultCard({
         {r.price_known && r.true_cost != null ? (
           <>
             <div className="mt-1.5 text-2xl font-bold text-ink">
-              {fmtTHB(r.true_cost)}{" "}
+              {fmtMoney(r.true_cost, currency)}{" "}
               <span className="text-xs font-semibold text-muted">/mo all-in</span>
+              {currency !== "THB" && (
+                <span className="ml-1.5 text-xs font-semibold text-muted">
+                  ({fmtMoney(r.true_cost, "THB")})
+                </span>
+              )}
             </div>
             <div className="mt-0.5 text-xs text-muted font-medium">
-              {fmtTHB(r.rent)} rent + ~{fmtTHB(r.monthly_fare)} {MODE_LABEL[mode]}
+              {fmtMoney(r.rent, currency)} rent + ~{fmtMoney(r.monthly_fare, currency)}{" "}
+              {MODE_LABEL[mode]}
             </div>
           </>
         ) : (
           <>
             <div className="mt-1.5 text-2xl font-bold text-ink">Price on request</div>
             <div className="mt-0.5 text-xs text-muted font-medium">
-              + ~{fmtTHB(r.monthly_fare)} {MODE_LABEL[mode]} fare. Rent isn't in free OSM data yet.
+              + ~{fmtMoney(r.monthly_fare, currency)} {MODE_LABEL[mode]} fare. No public rent price
+              for this place yet.
             </div>
           </>
         )}
@@ -129,11 +163,13 @@ export function ResultCard({
           <div className="mt-1 text-xs text-secondary-dim font-semibold">
             {r.true_cost_incl_time != null ? (
               <>
-                Incl. your time: <span className="font-bold">{fmtTHB(r.true_cost_incl_time)}/mo</span>
+                Incl. your time:{" "}
+                <span className="font-bold">{fmtMoney(r.true_cost_incl_time, currency)}/mo</span>
               </>
             ) : (
               <>
-                Your commute time ≈ <span className="font-bold">{fmtTHB(r.time_cost)}/mo</span>
+                Your commute time ≈{" "}
+                <span className="font-bold">{fmtMoney(r.time_cost, currency)}/mo</span>
               </>
             )}
           </div>
@@ -141,10 +177,14 @@ export function ResultCard({
 
         {otherFare && (
           <div className="mt-2 pt-2 border-t border-line text-[11px] text-muted font-medium">
-            vs {MODE_SHORT[other]}: ~{fmtTHB(otherFare.monthly_fare_thb)}/mo · {fmtHours(otherFare.monthly_hours)}/mo
+            vs {MODE_SHORT[other]}: ~{fmtMoney(otherFare.monthly_fare_thb, currency)}/mo ·{" "}
+            {fmtHours(otherFare.monthly_hours)}/mo
           </div>
         )}
       </div>
+
+      {/* multi-provider price comparison (affiliate Book buttons) */}
+      <PriceCompare offers={r.offers ?? []} currency={currency} />
 
       {/* tags */}
       <div className="mt-3 flex flex-wrap gap-1.5">

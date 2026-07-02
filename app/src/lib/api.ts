@@ -20,6 +20,12 @@ export interface SearchRequest {
   anchor_lon?: number;
   weights: Weights;
   budget: number;
+  currency: string;
+  check_in?: string | null; // ISO date
+  check_out?: string | null;
+  occupancy: number;
+  notes?: string | null;
+  other_terms: string[];
   commute_days: number;
   max_commute: number;
   nearby: string[];
@@ -53,6 +59,17 @@ export interface SubScores {
   living: number;
 }
 
+/** One provider's price for a listing (affiliate link carries the marker). */
+export interface Offer {
+  provider: string;
+  label: string;
+  monthly_thb: number;
+  nightly_thb: number | null;
+  url: string | null;
+}
+
+export type Badge = "top_match" | "best_value" | "best_quality";
+
 /** Mirrors backend ListingResult. */
 export interface ListingResult {
   name: string;
@@ -79,12 +96,34 @@ export interface ListingResult {
   lat: number | null;
   lon: number | null;
   source: string;
+  offers: Offer[];
+  sources: string[];
+  stars: number | null;
+  badge: Badge | null;
+}
+
+/** What the NLP layer extracted from free text (shown back to the user). */
+export interface ParsedNotes {
+  amenities: string[];
+  nearby: string[];
+  types: string[];
+  vibe: string | null;
+  weight_nudges: Weights;
+  must_haves: string[];
+  detected: string[];
+  engine: "rules" | "llm";
 }
 
 export interface SearchResponse {
   count: number;
   results: ListingResult[];
   note: string | null;
+  centre: [number, number] | null;
+  radius_used: number | null;
+  stay_months: number | null;
+  rainy_season: boolean;
+  parsed: ParsedNotes | null;
+  providers: string[];
 }
 
 export interface GeocodeResult {
@@ -92,6 +131,33 @@ export interface GeocodeResult {
   lat?: number;
   lon?: number;
   label?: string;
+}
+
+/** FX table: units of each currency per 1 THB (scoring base). */
+export interface RatesResponse {
+  base: string;
+  rates: Record<string, number>;
+  symbols: Record<string, string>;
+  source: string;
+}
+
+export interface FloodDay {
+  date: string;
+  rain_mm: number;
+  prob: number;
+}
+
+export type FloodRiskLevel = "low" | "moderate" | "high";
+
+export interface FloodRisk {
+  risk: FloodRiskLevel;
+  reasons: string[];
+  season: "peak" | "monsoon" | "dry";
+  week_rain_mm: number;
+  max_day_mm: number;
+  elevation_m: number | null;
+  daily: FloodDay[];
+  source: string;
 }
 
 /** Distinguishes "backend unreachable" (status 0) from an HTTP error. */
@@ -104,30 +170,60 @@ export class ApiError extends Error {
   }
 }
 
-export async function geocode(q: string): Promise<GeocodeResult> {
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let r: Response;
   try {
-    r = await fetch(`${API}/geocode?q=${encodeURIComponent(q)}`);
-  } catch {
+    r = await fetch(`${API}${path}`, init);
+  } catch (e) {
+    // an abort must bubble so stale searches can be discarded, not shown as errors
+    if (e instanceof DOMException && e.name === "AbortError") throw e;
     throw new ApiError("Could not reach the SiftPlace backend.", 0);
   }
-  if (!r.ok) throw new ApiError(`Geocode failed (${r.status}).`, r.status);
+  if (!r.ok) {
+    const hint = r.status === 429 ? " You're searching very fast — give it a minute." : "";
+    throw new ApiError(`Request failed (${r.status}).${hint}`, r.status);
+  }
   return r.json();
 }
 
-export async function search(payload: SearchRequest): Promise<SearchResponse> {
-  let r: Response;
-  try {
-    r = await fetch(`${API}/search`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch {
-    throw new ApiError("Could not reach the SiftPlace backend.", 0);
+export function geocode(q: string, signal?: AbortSignal): Promise<GeocodeResult> {
+  return request(`/geocode?q=${encodeURIComponent(q)}`, { signal });
+}
+
+export async function search(
+  payload: SearchRequest,
+  signal?: AbortSignal,
+): Promise<SearchResponse> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  // optional human check — active only when VITE_TURNSTILE_SITE_KEY is set
+  const { getTurnstileToken, turnstileEnabled } = await import("@/lib/turnstile");
+  if (turnstileEnabled) {
+    const token = await getTurnstileToken();
+    if (token) headers["x-turnstile-token"] = token;
   }
-  if (!r.ok) throw new ApiError(`Search failed (${r.status}).`, r.status);
-  return r.json();
+  return request(`/search`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+    signal,
+  });
+}
+
+export function parseNotes(text: string, signal?: AbortSignal): Promise<ParsedNotes> {
+  return request(`/parse`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+    signal,
+  });
+}
+
+export function getRates(): Promise<RatesResponse> {
+  return request(`/rates`);
+}
+
+export function getFloodRisk(lat: number, lon: number, signal?: AbortSignal): Promise<FloodRisk> {
+  return request(`/flood-risk?lat=${lat}&lon=${lon}`, { signal });
 }
 
 export { API as API_BASE };

@@ -3,12 +3,16 @@ import { SlidersHorizontal, X } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import {
   geocode,
+  getFloodRisk,
+  getRates,
   search,
   type CommuteMode,
+  type FloodRisk,
   type ListingResult,
   type SearchRequest,
 } from "@/lib/api";
-import { Intake, defaultIntake, type IntakeValues } from "@/components/Intake";
+import { setRates } from "@/lib/currency";
+import { Intake, defaultIntake, otherTerms, type IntakeValues } from "@/components/Intake";
 import { Results, type ResultsContext } from "@/components/Results";
 import { Saved } from "@/components/Saved";
 import { Areas } from "@/components/Areas";
@@ -41,6 +45,12 @@ function buildReq(
     anchor_lon: anchor?.lon,
     weights: v.weights,
     budget: v.budget,
+    currency: v.currency,
+    check_in: v.checkIn || null,
+    check_out: v.checkOut || null,
+    occupancy: v.occupancy,
+    notes: v.notes || null,
+    other_terms: otherTerms(v.others),
     commute_days: v.commuteDays,
     max_commute: v.maxCommute,
     nearby: v.nearby,
@@ -66,16 +76,45 @@ function App() {
     document.documentElement.dataset.theme = dark ? "dark" : "";
   }, [dark]);
 
+  // FX table for displaying prices in the user's currency (fallback built in).
+  useEffect(() => {
+    getRates().then(setRates).catch(() => {});
+  }, []);
+
   const [status, setStatus] = useState<Status>("loading");
   const [results, setResults] = useState<ListingResult[]>([]);
   const [note, setNote] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [geoFailedMsg, setGeoFailedMsg] = useState<string | null>(null);
-  const [ctx, setCtx] = useState<ResultsContext>({ city: "", dest: "", budget: 0, commuteDays: 5 });
+  const [flood, setFlood] = useState<FloodRisk | null>(null);
+  const [ctx, setCtx] = useState<ResultsContext>({
+    city: "", dest: "", budget: 0, currency: "THB", commuteDays: 5,
+    rainySeason: false, stayMonths: null, radiusUsed: null, parsed: null,
+  });
   const [lastReq, setLastReq] = useState<SearchRequest | null>(null);
   const [radius, setRadius] = useState(RADIUS_DEFAULT);
 
   const [tab, setTab] = useState<Tab>("listings");
+
+  // ---- stale-search protection -------------------------------------------
+  // Every apply aborts the in-flight request AND bumps a monotonic token, so a
+  // slow earlier response can never overwrite a newer search's results.
+  const seqRef = useRef(0);
+  const abortRef = useRef<AbortController | null>(null);
+  const [searchId, setSearchId] = useState(0); // resets the staged progress bar
+
+  const beginSearch = (): { seq: number; signal: AbortSignal } => {
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const seq = ++seqRef.current;
+    setSearchId(seq);
+    setResults([]); // old results must never linger under the progress bar
+    setFlood(null);
+    setStatus("loading");
+    return { seq, signal: controller.signal };
+  };
+  const isStale = (seq: number) => seq !== seqRef.current;
 
   // Saved listings are stored in full (not just by name) so the Compare table
   // works across searches and survives reloads. Persisted to localStorage.
@@ -105,16 +144,41 @@ function App() {
       return next;
     });
 
-  const runSearch = async (req: SearchRequest) => {
+  const runSearch = async (
+    req: SearchRequest,
+    handle?: { seq: number; signal: AbortSignal },
+    ctxPatch?: Partial<ResultsContext>,
+  ) => {
+    const { seq, signal } = handle ?? beginSearch();
     setLastReq(req);
-    setStatus("loading");
     setRadius(req.radius_m);
     try {
-      const res = await search(req);
+      const res = await search(req, signal);
+      if (isStale(seq)) return;
       setResults(res.results);
       setNote(res.note);
+      setCtx((p) => ({
+        ...p,
+        ...ctxPatch,
+        budget: req.budget,
+        currency: req.currency,
+        commuteDays: req.commute_days,
+        rainySeason: res.rainy_season,
+        stayMonths: res.stay_months,
+        radiusUsed: res.radius_used,
+        parsed: res.parsed,
+      }));
       setStatus(res.results.length === 0 ? "empty" : "ok");
+      if (res.centre) {
+        // weather + flood risk for the searched area (non-blocking, best effort)
+        getFloodRisk(res.centre[0], res.centre[1], signal)
+          .then((f) => {
+            if (!isStale(seq)) setFlood(f);
+          })
+          .catch(() => {});
+      }
     } catch (e) {
+      if (isStale(seq) || (e instanceof DOMException && e.name === "AbortError")) return;
       setErrorMsg(e instanceof Error ? e.message : "Unexpected error.");
       setStatus("error");
     }
@@ -122,7 +186,7 @@ function App() {
 
   const handleSearch = async (values: IntakeValues) => {
     setIntake(values);
-    setStatus("loading");
+    const handle = beginSearch();
     setGeoFailedMsg(null);
 
     let anchor: { lat: number; lon: number } | null = null;
@@ -131,13 +195,15 @@ function App() {
 
     if (dest) {
       try {
-        const g = await geocode(values.city ? `${dest}, ${values.city}` : dest);
+        const g = await geocode(values.city ? `${dest}, ${values.city}` : dest, handle.signal);
+        if (isStale(handle.seq)) return;
         if (g.found && g.lat != null && g.lon != null) {
           anchor = { lat: g.lat, lon: g.lon };
         } else {
           geoFailed = true;
         }
       } catch (e) {
+        if (isStale(handle.seq) || (e instanceof DOMException && e.name === "AbortError")) return;
         setErrorMsg(e instanceof Error ? e.message : "Unexpected error.");
         setStatus("error");
         return;
@@ -149,14 +215,11 @@ function App() {
         ? `Couldn't pin "${dest}" — searching the ${values.city || "city"} centre instead.`
         : null,
     );
-    setCtx({
-      city: values.city,
-      dest: dest,
-      budget: values.budget,
-      commuteDays: values.commuteDays,
-    });
 
-    await runSearch(buildReq(values, anchor, RADIUS_DEFAULT));
+    await runSearch(buildReq(values, anchor, RADIUS_DEFAULT), handle, {
+      city: values.city,
+      dest,
+    });
   };
 
   // Browse-first: load default (Bangkok) listings on mount. Guard against the
@@ -244,7 +307,7 @@ function App() {
 
           {tab === "listings" &&
             (status === "loading" ? (
-              <LoadingState />
+              <LoadingState searchId={searchId} />
             ) : status === "error" ? (
               <ErrorState message={errorMsg} onRetry={retry} onEdit={openFilter} />
             ) : status === "empty" ? (
@@ -255,6 +318,7 @@ function App() {
                 note={note}
                 mode={lastReq?.commute_mode ?? "car"}
                 context={ctx}
+                flood={flood}
                 savedNames={savedNames}
                 onToggleSave={toggleSave}
                 onChangeMode={changeMode}
@@ -262,7 +326,7 @@ function App() {
               />
             ))}
 
-          {tab === "saved" && <Saved items={savedItems} onToggleSave={toggleSave} />}
+          {tab === "saved" && <Saved items={savedItems} onToggleSave={toggleSave} currency={ctx.currency} />}
           {tab === "areas" && <Areas />}
           {tab === "guide" && <Guide />}
         </main>

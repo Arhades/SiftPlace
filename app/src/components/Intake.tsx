@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Search, MapPin, ArrowRight } from "lucide-react";
+import { Search, MapPin, ArrowRight, Sparkles, Users, CalendarDays } from "lucide-react";
 import { Logo } from "@/components/Logo";
-import type { CommuteMode, Weights } from "@/lib/api";
+import { parseNotes, type CommuteMode, type ParsedNotes, type Weights } from "@/lib/api";
 import { loadCities, searchCities, type CityEntry } from "@/lib/cities";
+import { CURRENCIES, SYMBOLS, fromTHB, toTHB } from "@/lib/currency";
 import {
   AMENITY_OPTIONS,
   MAX_COMMUTE_OPTIONS,
@@ -15,9 +16,24 @@ import { cn } from "@/lib/utils";
 import { ChipSelect } from "./ChipSelect";
 import { WeightSliders, WEIGHT_CAP } from "./WeightSliders";
 
+/** Free-text "Other" answers, one slot per question (all flow into the NLP side). */
+export interface OtherAnswers {
+  nearby: string;
+  vibe: string;
+  types: string;
+  amenities: string;
+  mode: string;
+}
+
 export interface IntakeValues {
   weights: Weights;
   budget: number;
+  currency: string;
+  checkIn: string; // ISO date or ""
+  checkOut: string;
+  occupancy: number;
+  notes: string;
+  others: OtherAnswers;
   commuteDays: number;
   maxCommute: number;
   mode: CommuteMode;
@@ -34,6 +50,12 @@ export function defaultIntake(): IntakeValues {
   return {
     weights: { cost: 8, location: 8, living: 4 },
     budget: 20000,
+    currency: "THB",
+    checkIn: "",
+    checkOut: "",
+    occupancy: 1,
+    notes: "",
+    others: { nearby: "", vibe: "", types: "", amenities: "", mode: "" },
     commuteDays: 5,
     maxCommute: 40,
     mode: "car",
@@ -47,7 +69,35 @@ export function defaultIntake(): IntakeValues {
   };
 }
 
+/** other_terms for the API: every non-empty "Other" answer. */
+export function otherTerms(o: OtherAnswers): string[] {
+  return Object.values(o)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 const FEATURED_CITIES = ["Bangkok", "Tokyo", "Seoul", "Singapore"];
+
+/** Does any part of the stay fall in Bangkok's Sep–Oct rainy/flood window? */
+function staySpansRainySeason(checkIn: string, checkOut: string): boolean {
+  if (!checkIn || !checkOut) return false;
+  const a = new Date(checkIn);
+  const b = new Date(checkOut);
+  if (!(a < b)) return false;
+  const d = new Date(a);
+  while (d <= b) {
+    const m = d.getMonth() + 1;
+    if (m === 9 || m === 10) return true;
+    d.setMonth(d.getMonth() + 1, 1);
+  }
+  return false;
+}
+
+function stayMonths(checkIn: string, checkOut: string): number | null {
+  if (!checkIn || !checkOut) return null;
+  const days = (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000;
+  return days > 0 ? Math.round((days / 30.4) * 10) / 10 : null;
+}
 
 const labelCls = "block text-[11px] font-bold uppercase tracking-wider text-muted mb-2";
 const fieldCls = "sf-field";
@@ -61,6 +111,8 @@ export function Intake({
 }) {
   const [v, setV] = useState<IntakeValues>(initial);
   const update = (patch: Partial<IntakeValues>) => setV((p) => ({ ...p, ...patch }));
+  const updateOther = (key: keyof OtherAnswers, val: string) =>
+    setV((p) => ({ ...p, others: { ...p.others, [key]: val } }));
 
   // City type-ahead (reuses the waitlist's world-city directory)
   const [allCities, setAllCities] = useState<CityEntry[]>([]);
@@ -99,9 +151,35 @@ export function Intake({
     setCityOpen(false);
   };
 
+  // Live "here's what we understood" preview for the free-text note (debounced).
+  const [parsed, setParsed] = useState<ParsedNotes | null>(null);
+  const parseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onNotesChange = (text: string) => {
+    update({ notes: text });
+    if (parseTimer.current) clearTimeout(parseTimer.current);
+    if (!text.trim()) {
+      setParsed(null);
+      return;
+    }
+    parseTimer.current = setTimeout(() => {
+      parseNotes(text)
+        .then(setParsed)
+        .catch(() => setParsed(null));
+    }, 600);
+  };
+
+  const changeCurrency = (cur: string) => {
+    // keep the budget the same real value, re-expressed in the new currency
+    const converted = Math.round(fromTHB(toTHB(v.budget, v.currency), cur));
+    update({ currency: cur, budget: Math.max(1, converted) });
+  };
+
   const total = v.weights.cost + v.weights.location + v.weights.living;
   const over = total > WEIGHT_CAP;
   const timeOn = v.valueOfTime > 0;
+  const months = stayMonths(v.checkIn, v.checkOut);
+  const rainy = staySpansRainySeason(v.checkIn, v.checkOut);
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
@@ -211,30 +289,120 @@ export function Intake({
           </p>
         </div>
 
-        {/* budget + days */}
+        {/* dates */}
+        <div>
+          <label className={labelCls}>
+            <CalendarDays className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+            When are you staying?
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <input
+                type="date"
+                className={fieldCls}
+                value={v.checkIn}
+                min={todayIso}
+                aria-label="Check-in date"
+                onChange={(e) => update({ checkIn: e.target.value })}
+              />
+              <p className="mt-1 text-[10px] text-muted font-bold uppercase tracking-wide text-center">Check-in</p>
+            </div>
+            <div>
+              <input
+                type="date"
+                className={fieldCls}
+                value={v.checkOut}
+                min={v.checkIn || todayIso}
+                aria-label="Check-out date"
+                onChange={(e) => update({ checkOut: e.target.value })}
+              />
+              <p className="mt-1 text-[10px] text-muted font-bold uppercase tracking-wide text-center">Check-out</p>
+            </div>
+          </div>
+          {months != null && (
+            <p className="mt-1.5 text-[11px] text-muted font-medium">
+              ≈ <span className="font-bold text-ink">{months} months</span> — we'll prefer places
+              that take stays this long.
+            </p>
+          )}
+          {rainy && (
+            <p className="mt-1.5 text-[11px] font-semibold text-warn bg-warn-soft rounded-xl px-3 py-2">
+              🌧️ Your stay overlaps Sep–Oct — Bangkok's rainy / flood season. Check each area's
+              flood risk on the results.
+            </p>
+          )}
+        </div>
+
+        {/* budget + currency + occupancy */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className={labelCls}>Budget /month (฿)</label>
-            <input
-              type="number"
-              min={1000}
-              step={500}
-              className={fieldCls}
-              value={v.budget}
-              onChange={(e) => update({ budget: Number(e.target.value) })}
-            />
+            <label className={labelCls}>Budget /month</label>
+            <div className="flex gap-2">
+              <input
+                type="number"
+                min={1}
+                step="any"
+                className={cn(fieldCls, "min-w-0")}
+                value={v.budget}
+                onChange={(e) => update({ budget: Math.max(1, Number(e.target.value)) })}
+              />
+              <select
+                aria-label="Budget currency"
+                className={cn(fieldCls, "w-auto shrink-0 px-3 cursor-pointer")}
+                value={v.currency}
+                onChange={(e) => changeCurrency(e.target.value)}
+              >
+                {CURRENCIES.map((c) => (
+                  <option key={c} value={c}>
+                    {SYMBOLS[c]} {c}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div>
-            <label className={labelCls}>Days commuting /week</label>
-            <input
-              type="number"
-              min={0}
-              max={7}
-              className={fieldCls}
-              value={v.commuteDays}
-              onChange={(e) => update({ commuteDays: Math.max(0, Math.min(7, Number(e.target.value))) })}
-            />
+            <label className={labelCls}>
+              <Users className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+              People staying
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                aria-label="Fewer people"
+                onClick={() => update({ occupancy: Math.max(1, v.occupancy - 1) })}
+                className="h-11 w-11 shrink-0 rounded-full border-2 border-line bg-lowest text-ink font-bold text-lg hover:bg-surface-c cursor-pointer"
+              >
+                −
+              </button>
+              <span className="flex-1 text-center text-lg font-bold text-ink">{v.occupancy}</span>
+              <button
+                type="button"
+                aria-label="More people"
+                onClick={() => update({ occupancy: Math.min(8, v.occupancy + 1) })}
+                className="h-11 w-11 shrink-0 rounded-full border-2 border-line bg-lowest text-ink font-bold text-lg hover:bg-surface-c cursor-pointer"
+              >
+                +
+              </button>
+            </div>
+            {v.occupancy > 2 && (
+              <p className="mt-1 text-[11px] text-muted font-medium">
+                Groups of {v.occupancy} need real space — dorm-style places rank lower.
+              </p>
+            )}
           </div>
+        </div>
+
+        {/* commute days */}
+        <div>
+          <label className={labelCls}>Days commuting /week</label>
+          <input
+            type="number"
+            min={0}
+            max={7}
+            className={fieldCls}
+            value={v.commuteDays}
+            onChange={(e) => update({ commuteDays: Math.max(0, Math.min(7, Number(e.target.value))) })}
+          />
         </div>
 
         {/* max commute */}
@@ -283,6 +451,12 @@ export function Intake({
               </button>
             ))}
           </div>
+          <input
+            className={cn(fieldCls, "mt-2")}
+            value={v.others.mode}
+            placeholder="Other (e.g. BTS + walk, own bicycle) — we'll factor it in"
+            onChange={(e) => updateOther("mode", e.target.value)}
+          />
         </div>
 
         {/* value of time */}
@@ -334,15 +508,38 @@ export function Intake({
       <section className="sf-well p-5 mb-5 space-y-5">
         <div>
           <label className={labelCls}>What do you want nearby?</label>
-          <ChipSelect multiple options={NEARBY_OPTIONS} value={v.nearby} onChange={(n) => update({ nearby: n })} />
+          <ChipSelect
+            multiple
+            options={NEARBY_OPTIONS}
+            value={v.nearby}
+            onChange={(n) => update({ nearby: n })}
+            otherValue={v.others.nearby}
+            onOtherChange={(s) => updateOther("nearby", s)}
+            otherPlaceholder="Other nearby want (e.g. running park, night market)"
+          />
         </div>
         <div>
           <label className={labelCls}>Street vibe</label>
-          <ChipSelect options={VIBE_OPTIONS} value={v.vibe} onChange={(val) => update({ vibe: val })} />
+          <ChipSelect
+            options={VIBE_OPTIONS}
+            value={v.vibe}
+            onChange={(val) => update({ vibe: val })}
+            otherValue={v.others.vibe}
+            onOtherChange={(s) => updateOther("vibe", s)}
+            otherPlaceholder="Other vibe (e.g. leafy, local, arty)"
+          />
         </div>
         <div>
           <label className={labelCls}>Place type</label>
-          <ChipSelect multiple options={TYPE_OPTIONS} value={v.types} onChange={(t) => update({ types: t })} />
+          <ChipSelect
+            multiple
+            options={TYPE_OPTIONS}
+            value={v.types}
+            onChange={(t) => update({ types: t })}
+            otherValue={v.others.types}
+            onOtherChange={(s) => updateOther("types", s)}
+            otherPlaceholder="Other place type (e.g. co-living, homestay)"
+          />
         </div>
         <div>
           <label className={labelCls}>Must-have amenities</label>
@@ -351,7 +548,41 @@ export function Intake({
             options={AMENITY_OPTIONS}
             value={v.amenities}
             onChange={(a) => update({ amenities: a })}
+            otherValue={v.others.amenities}
+            onOtherChange={(s) => updateOther("amenities", s)}
+            otherPlaceholder="Other must-have (e.g. balcony, bathtub, parking)"
           />
+        </div>
+
+        {/* free-text NLP */}
+        <div>
+          <label className={labelCls}>
+            <Sparkles className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+            Anything else? <span className="normal-case font-medium text-muted/70">(optional)</span>
+          </label>
+          <textarea
+            className={cn(fieldCls, "rounded-3xl min-h-24 resize-y")}
+            value={v.notes}
+            placeholder='Tell us in your own words — "quiet street, pet friendly, near a Muay Thai gym, I hate long commutes…"'
+            onChange={(e) => onNotesChange(e.target.value)}
+          />
+          {parsed && parsed.detected.length > 0 && (
+            <div className="mt-2">
+              <p className="text-[11px] text-muted font-bold mb-1.5">
+                Got it — we detected{parsed.engine === "llm" ? " (AI)" : ""}:
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {parsed.detected.map((d) => (
+                  <span
+                    key={d}
+                    className="px-2.5 py-1 rounded-full bg-ok-soft text-ok text-[11px] font-bold"
+                  >
+                    ✓ {d}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

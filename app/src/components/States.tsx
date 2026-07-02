@@ -1,13 +1,62 @@
-import { Loader2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
-export function LoadingState() {
+// Staged search progress. Stages advance on a timer while the request runs
+// (the network does the real work); the bar restarts from stage 0 on every
+// re-apply — keyed by searchId so an aborted/re-fired search always resets.
+const STAGES = [
+  "Consolidating Request…",
+  "Searching area…",
+  "Narrowing down the best options for you :)",
+  "Finalising Selection!",
+] as const;
+
+// how long each stage holds before advancing (the last stage holds until done)
+const STAGE_MS = [900, 2600, 3500];
+
+export function LoadingState({ searchId = 0 }: { searchId?: number }) {
+  const [stage, setStage] = useState(0);
+
+  useEffect(() => {
+    setStage(0);
+    const timers = STAGE_MS.map((_, i) =>
+      setTimeout(
+        () => setStage(i + 1),
+        STAGE_MS.slice(0, i + 1).reduce((a, b) => a + b, 0),
+      ),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [searchId]);
+
+  const pct = ((stage + 1) / STAGES.length) * 100;
+
   return (
     <div className="flex flex-col items-center justify-center text-center py-24 px-6 animate-sift-fade">
-      <Loader2 className="h-8 w-8 text-primary-dim animate-spin mb-5" />
-      <h3 className="text-lg font-bold text-ink mb-1">Sifting real places near you…</h3>
-      <p className="text-sm text-muted max-w-xs font-medium">
-        Geocoding your destination, pulling listings from OpenStreetMap, and pricing the commute.
-      </p>
+      <div className="w-full max-w-sm">
+        <div className="h-3 rounded-full bg-surface-high overflow-hidden">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-primary to-primary-dim transition-all duration-700 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <h3 className="mt-5 text-lg font-bold text-ink" aria-live="polite">
+          {STAGES[stage]}
+        </h3>
+        <div className="mt-4 flex justify-center gap-1.5">
+          {STAGES.map((s, i) => (
+            <span
+              key={s}
+              className={cn(
+                "h-1.5 w-6 rounded-full transition-colors",
+                i <= stage ? "bg-primary-dim" : "bg-surface-high",
+              )}
+            />
+          ))}
+        </div>
+        <p className="mt-4 text-sm text-muted max-w-xs mx-auto font-medium">
+          Pulling real listings, pricing the commute, and ranking by true monthly cost.
+        </p>
+      </div>
     </div>
   );
 }

@@ -35,10 +35,38 @@ def haversine_m(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
 # so the headline trade-off is calibrated to real Bangkok rates, not generic units.
 
 
+# --- tuning ------------------------------------------------------------------
+
+# >1 sharpens the normalised weights so the profile genuinely dominates ranking:
+# a 9/3/2 spread must produce a clearly different shortlist than 3/9/2.
+WEIGHT_GAMMA = 1.6
+
+# Occupancy: sqm a solo student needs, plus per extra person. At occupancy 1
+# this reproduces the original clamp(space/30).
+SPACE_BASE_SQM = 30
+SPACE_PER_EXTRA_SQM = 14
+
+# Hostels/dorm-style places fit 1-2 people; bigger groups need real units.
+GROUP_TYPE_PENALTY = {"hostel": 0.5}
+GROUP_SIZE_THRESHOLD = 2
+
+# Listings whose minimum stay exceeds the user's stay get this multiplier.
+STAY_MISMATCH_TOL = 0.7
+
+
 # --- helpers -----------------------------------------------------------------
 
 def clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
     return max(lo, min(hi, x))
+
+
+def sharpen_weights(w: dict[str, float], gamma: float = WEIGHT_GAMMA) -> dict[str, float]:
+    """Normalise, then push the distribution toward its dominant axes so the
+    user's priorities decide the ranking instead of averaging out."""
+    total = sum(w.values()) or 1
+    powered = {k: (v / total) ** gamma for k, v in w.items()}
+    ptotal = sum(powered.values()) or 1
+    return {k: v / ptotal for k, v in powered.items()}
 
 
 def distance_score(metres: float, good: float = 300, bad: float = 2000) -> float:
@@ -114,7 +142,9 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
         + 0.1 * vibe_match
     )
 
-    # 4) living score — amenities matched + place type + space
+    # 4) living score — amenities matched + place type + space (occupancy-aware)
+    #    + a quality signal (stars/guest rating) when an affiliate source has one
+    occupancy = max(1, prefs.get("occupancy", 1) or 1)
     req_amen = prefs.get("amenities", [])
     amenities = listing.get("amenities")  # None means "unknown" (OSM)
     if amenities is None:
@@ -124,18 +154,30 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
     else:
         amen_s = 0.6
     type_s = 1.0 if listing.get("type") in prefs.get("types", [listing.get("type")]) else 0.3
+    if occupancy > GROUP_SIZE_THRESHOLD:
+        type_s *= GROUP_TYPE_PENALTY.get(listing.get("type"), 1.0)
     space = listing.get("space_sqm")
-    space_s = clamp(space / 30) if space else 0.5
-    living_s = 0.5 * amen_s + 0.3 * type_s + 0.2 * space_s
+    needed_sqm = SPACE_BASE_SQM + SPACE_PER_EXTRA_SQM * (occupancy - 1)
+    space_s = clamp(space / needed_sqm) if space else (0.5 if occupancy <= 2 else 0.4)
+    stars = listing.get("stars")
+    rating = listing.get("rating")  # guest rating 0-10
+    quality = (stars / 5) if stars else ((rating / 10) if rating else None)
+    if quality is not None:
+        living_s = 0.35 * amen_s + 0.25 * type_s + 0.15 * space_s + 0.25 * clamp(quality)
+    else:
+        living_s = 0.5 * amen_s + 0.3 * type_s + 0.2 * space_s
 
-    # 5) combine with normalised weights, then apply a commute-tolerance penalty
-    w = prefs["weights"]
-    total_w = sum(w.values()) or 1
-    f = {k: v / total_w for k, v in w.items()}
+    # 5) combine with sharpened weights, then apply tolerance penalties
+    f = sharpen_weights(prefs["weights"])
     tol = 1.0
     max_commute = prefs.get("max_commute", 0)
     if max_commute and commute_min > max_commute:
         tol = clamp(1 - (commute_min - max_commute) / max(max_commute, 1), 0.3, 1.0)
+    # prefer places that accept the stay length (soft — data is often missing)
+    stay_months = prefs.get("stay_months")
+    min_stay = listing.get("min_stay_months")
+    if stay_months and min_stay and min_stay > stay_months:
+        tol *= STAY_MISMATCH_TOL
     total = (f["cost"] * cost_s + f["location"] * location_s + f["living"] * living_s) * tol
 
     met = [w for w in wants if nearby.get(w, 99999) <= 1000]
@@ -168,11 +210,22 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
         "lat": listing["lat"],
         "lon": listing["lon"],
         "source": listing.get("source", "mock"),
+        "offers": listing.get("offers", []),
+        "sources": listing.get("sources", []),
+        "stars": stars,
+        "badge": None,
     }
 
 
 def rank_listings(listings: list[dict], prefs: dict, top_n: int = 5) -> list[dict]:
-    """Score every listing and return the top N, highest score first."""
-    scored = [score_listing(l, prefs) for l in listings]
+    """Score every listing and return the top N, highest score first.
+
+    Places whose known capacity is below the group size are filtered out —
+    a 6-person group can't take a 2-person room no matter the score.
+    """
+    occupancy = max(1, prefs.get("occupancy", 1) or 1)
+    eligible = [l for l in listings
+                if not (l.get("capacity") and l["capacity"] < occupancy)]
+    scored = [score_listing(l, prefs) for l in eligible]
     scored.sort(key=lambda r: -r["score"])
     return scored[:top_n]
