@@ -27,8 +27,16 @@ import os
 import pathlib
 
 import requests as _requests
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+
+# Load backend/.env (if present) into the process environment BEFORE any
+# module below reads os.environ — this is what makes .env.example's
+# "copy to .env" instruction actually true. Real env vars set in the shell
+# still win; this only fills in what's missing. Safe to call with no .env
+# file present (no-op).
+load_dotenv()
 
 from flood import flood_risk
 from geocode import geocode as geocode_fn

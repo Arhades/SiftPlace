@@ -43,16 +43,32 @@ _SYNONYMS: list[tuple[str, str, str]] = [
     (r"supermarket|grocery|groceries", "nearby", "supermarket"),
     (r"\bbts\b|\bmrt\b|train|metro|subway|skytrain|station", "nearby", "transit"),
     (r"\bmall\b|shopping cent(er|re)|department store", "nearby", "mall"),
-    (r"(flea|night|street|weekend) market|market\b", "nearby", "flea_market"),
+    (r"(flea|night|street|weekend) market|\bmarket\b", "nearby", "flea_market"),
     # place types
     (r"condo(minium)?|apartment|studio\b|\bflat\b", "types", "condo"),
     (r"hostel|dorm(itory)?|shared room", "types", "hostel"),
     (r"hotel|serviced", "types", "hotel"),
+    # --- extended vocabulary (more student phrasings) ---
+    (r"fib(er|re)|high[- ]speed|good (internet|connection)|strong wifi|reliable internet", "amenities", "wifi"),
+    (r"study (area|room)|work ?space|wfh|work from home|work ?desk", "amenities", "desk"),
+    (r"kitchenette|pantry|microwave|induction|stove ?top", "amenities", "kitchen"),
+    (r"laundromat|dryer|\bwashing\b", "amenities", "laundry"),
+    (r"swimming pool|gym in (the )?building|sauna|jacuzzi", "amenities", "gympool"),
+    (r"crossfit|jiu[- ]?jitsu|\bbjj\b|yoga|climbing|calisthenics|weight ?room", "nearby", "gym"),
+    (r"7[- ]?eleven|seven[- ]?eleven|convenience store|big[- ]?c\b|lotus|makro|villa market|\btops\b|gourmet market|family ?mart", "nearby", "supermarket"),
+    (r"\barl\b|airport (link|rail)|\bbus\b|\bboat\b|\bpier\b|ferry|\bvan\b|motorbike (taxi|stand)", "nearby", "transit"),
+    (r"iconsiam|\bcentral\b|terminal 21|emporium|emquartier|\boutlet\b", "nearby", "mall"),
+    (r"night market|chatuchak|food market|wet market|bazaar|weekend market", "nearby", "flea_market"),
+    (r"serviced apartment|aparthotel|apart hotel", "types", "condo"),
+    (r"co[- ]?living|shared house|\bbunk\b", "types", "hostel"),
+    (r"guest ?house", "types", "hotel"),
 ]
 
 _VIBES: list[tuple[str, str]] = [
     (r"quiet|peaceful|calm|residential|low-?key", "quiet"),
     (r"lively|nightlife|party|social|vibrant|busy street", "lively"),
+    (r"serene|\bchill\b|sleepy|leafy|\bgreen\b|tranquil|relaxed|low[- ]traffic", "quiet"),
+    (r"buzzing|happening|trendy|\bhip(ster)?\b|energetic|\bbars?\b|\bclubs?\b", "lively"),
 ]
 
 # phrase -> weight nudge. Soft: ±2 max per axis, folded into the sliders server-side.
@@ -60,6 +76,12 @@ _NUDGES: list[tuple[str, str, int]] = [
     (r"cheap(est)?|budget|affordable|save money|as low as possible|tight on money", "cost", 2),
     (r"money('s| is)? (no|not an) (object|issue)|don't care about (price|cost)|price doesn'?t matter", "cost", -2),
     (r"luxur(y|ious)|high[- ]end|comfort(able)?|quality|nic(e|est) (place|room)|modern", "living", 2),
+    (r"student budget|low rent|cheap rent|economical|frugal|\bbroke\b|inexpensive", "cost", 2),
+    (r"budget is flexible|willing to pay more|happy to pay|splurge|money is not a problem", "cost", -2),
+    (r"spacious|big room|natural light|brand new|renovated|cozy|clean|aesthetic|instagram", "living", 2),
+    (r"basic is (ok|fine)|no frills|simple (room|place) is fine", "living", -2),
+    (r"walkable|steps from|next to (the )?(bts|mrt|station)|\bminutes? (from|away)|near (school|internship)", "location", 2),
+    (r"happy to travel|ok with a long commute|far is fine|don.t mind (being far|the distance)", "location", -2),
     (r"close to|near (campus|work|university|uni|office)|walking distance|short commute|hate commuting", "location", 2),
     (r"don't mind (commuting|travelling|traveling)|commute is fine|far is (ok|fine)", "location", -2),
 ]
@@ -75,6 +97,23 @@ _MUST_HAVES: list[tuple[str, str]] = [
     (r"parking", "parking"),
     (r"elevator|lift\b", "elevator"),
     (r"air ?con(ditioning)?|a/c|\bac\b", "air conditioning"),
+    # --- extended must-haves ---
+    (r"furnished", "furnished"),
+    (r"unfurnished", "unfurnished"),
+    (r"terrace", "balcony"),
+    (r"high floor|top floor", "high floor"),
+    (r"girls? only", "female-only"),
+    (r"co[- ]?working|study room|\blibrary\b", "co-working / study room"),
+    (r"cctv|keycard|24[- ]?7 security|secure building", "24/7 security"),
+    (r"soundproof|quiet at night|no noise", "quiet at night"),
+    (r"near (a )?hospital|near (a )?clinic", "near a hospital"),
+    (r"veg(etarian|an)|halal|muslim[- ]friendly", "specific food nearby"),
+    (r"\bcafe\b|coffee (shop|place)", "cafe nearby"),
+    (r"green space|city park|public park|jogging (track|path)", "green space nearby"),
+    (r"short lease|monthly rental|month[- ]to[- ]month|no (long )?contract", "short/flexible lease"),
+    (r"no deposit|low deposit", "low/no deposit"),
+    (r"gaming|streaming|zoom|video call", "reliable fast internet"),
+    (r"scooter parking|motorbike parking|car park", "parking"),
 ]
 
 _LABELS = {
