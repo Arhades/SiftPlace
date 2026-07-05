@@ -1,0 +1,67 @@
+kind,target,value,pattern,label
+synonym,amenities,wifi,wi-?fi|internet|broadband,fast wifi
+synonym,amenities,wifi,fib(er|re)|high[- ]speed|good (internet|connection)|strong wifi|reliable internet,fast wifi
+synonym,amenities,desk,desk|study (space|table)|workspace,study desk
+synonym,amenities,desk,study (area|room)|work ?space|wfh|work from home|work ?desk,study desk
+synonym,amenities,kitchen,kitchen|cook(ing)?|stove,kitchen
+synonym,amenities,kitchen,kitchenette|pantry|microwave|induction|stove ?top,kitchen
+synonym,amenities,laundry,laundry|washing machine|washer,laundry
+synonym,amenities,laundry,laundromat|dryer|\bwashing\b,laundry
+synonym,amenities,gympool,pool|swimming|building gym|fitness (room|center|centre),building gym/pool
+synonym,amenities,gympool,swimming pool|gym in (the )?building|sauna|jacuzzi,building gym/pool
+synonym,nearby,gym,\bgym\b|muay thai|boxing|martial arts|dojo,gym nearby
+synonym,nearby,gym,crossfit|jiu[- ]?jitsu|\bbjj\b|yoga|climbing|calisthenics|weight ?room,gym nearby
+synonym,nearby,supermarket,supermarket|grocery|groceries,supermarket nearby
+synonym,nearby,supermarket,7[- ]?eleven|seven[- ]?eleven|convenience store|big[- ]?c\b|lotus|makro|villa market|\btops\b|gourmet market|family ?mart,supermarket nearby
+synonym,nearby,transit,\bbts\b|\bmrt\b|train|metro|subway|skytrain|station,train/metro nearby
+synonym,nearby,transit,\barl\b|airport (link|rail)|\bbus\b|\bboat\b|\bpier\b|ferry|\bvan\b|motorbike (taxi|stand),train/metro nearby
+synonym,nearby,mall,\bmall\b|shopping cent(er|re)|department store,mall nearby
+synonym,nearby,mall,iconsiam|\bcentral\b|terminal 21|emporium|emquartier|\boutlet\b,mall nearby
+synonym,nearby,flea_market,(flea|night|street|weekend) market|\bmarket\b,market nearby
+synonym,nearby,flea_market,night market|chatuchak|food market|wet market|bazaar|weekend market,market nearby
+synonym,types,condo,condo(minium)?|apartment|studio\b|\bflat\b,condo/apartment
+synonym,types,condo,serviced apartment|aparthotel|apart hotel,condo/apartment
+synonym,types,hostel,hostel|dorm(itory)?|shared room,hostel
+synonym,types,hostel,co[- ]?living|shared house|\bbunk\b,hostel
+synonym,types,hotel,hotel|serviced,hotel
+synonym,types,hotel,guest ?house,hotel
+vibe,,quiet,quiet|peaceful|calm|residential|low-?key,
+vibe,,lively,lively|nightlife|party|social|vibrant|busy street,
+vibe,,quiet,serene|\bchill\b|sleepy|leafy|\bgreen\b|tranquil|relaxed|low[- ]traffic,
+vibe,,lively,buzzing|happening|trendy|\bhip(ster)?\b|energetic|\bbars?\b|\bclubs?\b,
+nudge,cost,2,cheap(est)?|budget|affordable|save money|as low as possible|tight on money,
+nudge,cost,-2,money('s| is)? (no|not an) (object|issue)|don't care about (price|cost)|price doesn'?t matter,
+nudge,living,2,luxur(y|ious)|high[- ]end|comfort(able)?|quality|nic(e|est) (place|room)|modern,
+nudge,cost,2,student budget|low rent|cheap rent|economical|frugal|\bbroke\b|inexpensive,
+nudge,cost,-2,budget is flexible|willing to pay more|happy to pay|splurge|money is not a problem,
+nudge,living,2,spacious|big room|natural light|brand new|renovated|cozy|clean|aesthetic|instagram,
+nudge,living,-2,basic is (ok|fine)|no frills|simple (room|place) is fine,
+nudge,location,2,walkable|steps from|next to (the )?(bts|mrt|station)|\bminutes? (from|away)|near (school|internship),
+nudge,location,-2,happy to travel|ok with a long commute|far is fine|don.t mind (being far|the distance),
+nudge,location,2,close to|near (campus|work|university|uni|office)|walking distance|short commute|hate commuting,
+nudge,location,-2,don't mind (commuting|travelling|traveling)|commute is fine|far is (ok|fine),
+musthave,,pet friendly,pet|cat|dog,
+musthave,,balcony,balcony,
+musthave,,bathtub,bathtub|bath tub,
+musthave,,a view,(city|river|nice) view,
+musthave,,female-only,female[- ]only|women[- ]only,
+musthave,,non-smoking,non[- ]smoking|no smoking,
+musthave,,parking,parking,
+musthave,,elevator,elevator|lift\b,
+musthave,,air conditioning,air ?con(ditioning)?|a/c|\bac\b,
+musthave,,furnished,furnished,
+musthave,,unfurnished,unfurnished,
+musthave,,balcony,terrace,
+musthave,,high floor,high floor|top floor,
+musthave,,female-only,girls? only,
+musthave,,co-working / study room,co[- ]?working|study room|\blibrary\b,
+musthave,,24/7 security,cctv|keycard|24[- ]?7 security|secure building,
+musthave,,quiet at night,soundproof|quiet at night|no noise,
+musthave,,near a hospital,near (a )?hospital|near (a )?clinic,
+musthave,,specific food nearby,veg(etarian|an)|halal|muslim[- ]friendly,
+musthave,,cafe nearby,\bcafe\b|coffee (shop|place),
+musthave,,green space nearby,green space|city park|public park|jogging (track|path),
+musthave,,short/flexible lease,short lease|monthly rental|month[- ]to[- ]month|no (long )?contract,
+musthave,,low/no deposit,no deposit|low deposit,
+musthave,,reliable fast internet,gaming|streaming|zoom|video call,
+musthave,,parking,scooter parking|motorbike parking|car park,

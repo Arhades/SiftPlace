@@ -1,8 +1,9 @@
 """Free-text intake parsing: "Anything else?" → structured search demands.
 
 Two engines:
-  1. `parse_rules` — dependency-free keyword/synonym parser. Always available;
-     this is the guaranteed fallback.
+  1. `parse_rules` — dependency-free keyword/synonym parser driven by the
+     **`nlp_terms.csv`** "bag of words" next to this file. Always available; the
+     guaranteed fallback. Edit the vocabulary in the CSV — no code changes needed.
   2. `parse_llm`  — optional LLM extraction via the Anthropic API when
      ANTHROPIC_API_KEY is set (never required; falls back to rules on ANY error).
 
@@ -17,11 +18,20 @@ Both return the same shape so the caller/frontend doesn't care which ran:
   detected:    ["🛒 supermarket nearby", ...]  # human-readable, shown to user
   engine:      "rules" | "llm"
 }
+
+CSV columns (nlp_terms.csv):
+  kind,target,value,pattern,label
+    kind=synonym  → target=bucket(amenities|nearby|types), value=key, label=human text
+    kind=vibe     → value=quiet|lively
+    kind=nudge    → target=axis(cost|location|living), value=delta(-2..2)
+    kind=musthave → value=the demand label
 """
 from __future__ import annotations
 
+import csv
 import json
 import os
+import pathlib
 import re
 
 import requests
@@ -30,100 +40,53 @@ AMENITY_KEYS = ["wifi", "desk", "kitchen", "laundry", "gympool"]
 NEARBY_KEYS = ["gym", "supermarket", "transit", "mall", "flea_market"]
 TYPE_KEYS = ["condo", "hostel", "hotel"]
 
-# synonym -> (bucket, canonical key). Matched on word boundaries, first-win.
-_SYNONYMS: list[tuple[str, str, str]] = [
-    # amenities
-    (r"wi-?fi|internet|broadband", "amenities", "wifi"),
-    (r"desk|study (space|table)|workspace", "amenities", "desk"),
-    (r"kitchen|cook(ing)?|stove", "amenities", "kitchen"),
-    (r"laundry|washing machine|washer", "amenities", "laundry"),
-    (r"pool|swimming|building gym|fitness (room|center|centre)", "amenities", "gympool"),
-    # nearby wants
-    (r"\bgym\b|muay thai|boxing|martial arts|dojo", "nearby", "gym"),
-    (r"supermarket|grocery|groceries", "nearby", "supermarket"),
-    (r"\bbts\b|\bmrt\b|train|metro|subway|skytrain|station", "nearby", "transit"),
-    (r"\bmall\b|shopping cent(er|re)|department store", "nearby", "mall"),
-    (r"(flea|night|street|weekend) market|\bmarket\b", "nearby", "flea_market"),
-    # place types
-    (r"condo(minium)?|apartment|studio\b|\bflat\b", "types", "condo"),
-    (r"hostel|dorm(itory)?|shared room", "types", "hostel"),
-    (r"hotel|serviced", "types", "hotel"),
-    # --- extended vocabulary (more student phrasings) ---
-    (r"fib(er|re)|high[- ]speed|good (internet|connection)|strong wifi|reliable internet", "amenities", "wifi"),
-    (r"study (area|room)|work ?space|wfh|work from home|work ?desk", "amenities", "desk"),
-    (r"kitchenette|pantry|microwave|induction|stove ?top", "amenities", "kitchen"),
-    (r"laundromat|dryer|\bwashing\b", "amenities", "laundry"),
-    (r"swimming pool|gym in (the )?building|sauna|jacuzzi", "amenities", "gympool"),
-    (r"crossfit|jiu[- ]?jitsu|\bbjj\b|yoga|climbing|calisthenics|weight ?room", "nearby", "gym"),
-    (r"7[- ]?eleven|seven[- ]?eleven|convenience store|big[- ]?c\b|lotus|makro|villa market|\btops\b|gourmet market|family ?mart", "nearby", "supermarket"),
-    (r"\barl\b|airport (link|rail)|\bbus\b|\bboat\b|\bpier\b|ferry|\bvan\b|motorbike (taxi|stand)", "nearby", "transit"),
-    (r"iconsiam|\bcentral\b|terminal 21|emporium|emquartier|\boutlet\b", "nearby", "mall"),
-    (r"night market|chatuchak|food market|wet market|bazaar|weekend market", "nearby", "flea_market"),
-    (r"serviced apartment|aparthotel|apart hotel", "types", "condo"),
-    (r"co[- ]?living|shared house|\bbunk\b", "types", "hostel"),
-    (r"guest ?house", "types", "hotel"),
-]
+_TERMS_CSV = pathlib.Path(__file__).parent / "nlp_terms.csv"
 
-_VIBES: list[tuple[str, str]] = [
-    (r"quiet|peaceful|calm|residential|low-?key", "quiet"),
-    (r"lively|nightlife|party|social|vibrant|busy street", "lively"),
-    (r"serene|\bchill\b|sleepy|leafy|\bgreen\b|tranquil|relaxed|low[- ]traffic", "quiet"),
-    (r"buzzing|happening|trendy|\bhip(ster)?\b|energetic|\bbars?\b|\bclubs?\b", "lively"),
-]
 
-# phrase -> weight nudge. Soft: ±2 max per axis, folded into the sliders server-side.
-_NUDGES: list[tuple[str, str, int]] = [
-    (r"cheap(est)?|budget|affordable|save money|as low as possible|tight on money", "cost", 2),
-    (r"money('s| is)? (no|not an) (object|issue)|don't care about (price|cost)|price doesn'?t matter", "cost", -2),
-    (r"luxur(y|ious)|high[- ]end|comfort(able)?|quality|nic(e|est) (place|room)|modern", "living", 2),
-    (r"student budget|low rent|cheap rent|economical|frugal|\bbroke\b|inexpensive", "cost", 2),
-    (r"budget is flexible|willing to pay more|happy to pay|splurge|money is not a problem", "cost", -2),
-    (r"spacious|big room|natural light|brand new|renovated|cozy|clean|aesthetic|instagram", "living", 2),
-    (r"basic is (ok|fine)|no frills|simple (room|place) is fine", "living", -2),
-    (r"walkable|steps from|next to (the )?(bts|mrt|station)|\bminutes? (from|away)|near (school|internship)", "location", 2),
-    (r"happy to travel|ok with a long commute|far is fine|don.t mind (being far|the distance)", "location", -2),
-    (r"close to|near (campus|work|university|uni|office)|walking distance|short commute|hate commuting", "location", 2),
-    (r"don't mind (commuting|travelling|traveling)|commute is fine|far is (ok|fine)", "location", -2),
-]
+def _load_terms(path: pathlib.Path = _TERMS_CSV):
+    """Load the keyword bag of words from CSV.
 
-# demands we recognise but can't map to a scoring key — surfaced as must_haves
-_MUST_HAVES: list[tuple[str, str]] = [
-    (r"pet|cat|dog", "pet friendly"),
-    (r"balcony", "balcony"),
-    (r"bathtub|bath tub", "bathtub"),
-    (r"(city|river|nice) view", "a view"),
-    (r"female[- ]only|women[- ]only", "female-only"),
-    (r"non[- ]smoking|no smoking", "non-smoking"),
-    (r"parking", "parking"),
-    (r"elevator|lift\b", "elevator"),
-    (r"air ?con(ditioning)?|a/c|\bac\b", "air conditioning"),
-    # --- extended must-haves ---
-    (r"furnished", "furnished"),
-    (r"unfurnished", "unfurnished"),
-    (r"terrace", "balcony"),
-    (r"high floor|top floor", "high floor"),
-    (r"girls? only", "female-only"),
-    (r"co[- ]?working|study room|\blibrary\b", "co-working / study room"),
-    (r"cctv|keycard|24[- ]?7 security|secure building", "24/7 security"),
-    (r"soundproof|quiet at night|no noise", "quiet at night"),
-    (r"near (a )?hospital|near (a )?clinic", "near a hospital"),
-    (r"veg(etarian|an)|halal|muslim[- ]friendly", "specific food nearby"),
-    (r"\bcafe\b|coffee (shop|place)", "cafe nearby"),
-    (r"green space|city park|public park|jogging (track|path)", "green space nearby"),
-    (r"short lease|monthly rental|month[- ]to[- ]month|no (long )?contract", "short/flexible lease"),
-    (r"no deposit|low deposit", "low/no deposit"),
-    (r"gaming|streaming|zoom|video call", "reliable fast internet"),
-    (r"scooter parking|motorbike parking|car park", "parking"),
-]
+    Degrades gracefully to empty lists if the file is missing or a row is
+    malformed (the LLM engine still works). Rules matched on lowercased text.
+    """
+    synonyms: list[tuple[str, str, str]] = []
+    vibes: list[tuple[str, str]] = []
+    nudges: list[tuple[str, str, int]] = []
+    must_haves: list[tuple[str, str]] = []
+    labels: dict[str, dict[str, str]] = {"amenities": {}, "nearby": {}, "types": {}}
+    try:
+        with open(path, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                kind = (row.get("kind") or "").strip()
+                pattern = (row.get("pattern") or "").strip()
+                if not kind or not pattern:
+                    continue
+                target = (row.get("target") or "").strip()
+                value = (row.get("value") or "").strip()
+                label = (row.get("label") or "").strip()
+                try:
+                    re.compile(pattern)              # skip a broken regex, don't crash import
+                except re.error:
+                    continue
+                if kind == "synonym":
+                    synonyms.append((pattern, target, value))
+                    if target in labels:
+                        labels[target].setdefault(value, label or value)
+                elif kind == "vibe":
+                    vibes.append((pattern, value))
+                elif kind == "nudge":
+                    try:
+                        nudges.append((pattern, target, int(value)))
+                    except ValueError:
+                        pass
+                elif kind == "musthave":
+                    must_haves.append((pattern, value))
+    except FileNotFoundError:
+        pass
+    return synonyms, vibes, nudges, must_haves, labels
 
-_LABELS = {
-    "amenities": {"wifi": "fast wifi", "desk": "study desk", "kitchen": "kitchen",
-                  "laundry": "laundry", "gympool": "building gym/pool"},
-    "nearby": {"gym": "gym nearby", "supermarket": "supermarket nearby",
-               "transit": "train/metro nearby", "mall": "mall nearby",
-               "flea_market": "market nearby"},
-    "types": {"condo": "condo/apartment", "hostel": "hostel", "hotel": "hotel"},
-}
+
+_SYNONYMS, _VIBES, _NUDGES, _MUST_HAVES, _LABELS = _load_terms()
 
 
 def _empty(engine: str) -> dict:
@@ -133,16 +96,16 @@ def _empty(engine: str) -> dict:
 
 
 def parse_rules(text: str) -> dict:
-    """Keyword/synonym extraction. Deterministic, instant, no dependencies."""
+    """Keyword/synonym extraction from the CSV bag of words. Deterministic, instant."""
     out = _empty("rules")
     t = (text or "").lower()
     if not t.strip():
         return out
 
     for pattern, bucket, key in _SYNONYMS:
-        if re.search(pattern, t) and key not in out[bucket]:
+        if key not in out[bucket] and re.search(pattern, t):
             out[bucket].append(key)
-            out["detected"].append(_LABELS[bucket][key])
+            out["detected"].append(_LABELS.get(bucket, {}).get(key, key))
 
     for pattern, vibe in _VIBES:
         if re.search(pattern, t):
@@ -160,7 +123,7 @@ def parse_rules(text: str) -> dict:
             out["detected"].append(f"{'more' if delta > 0 else 'less'} weight on {axis}")
 
     for pattern, label in _MUST_HAVES:
-        if re.search(pattern, t) and label not in out["must_haves"]:
+        if label not in out["must_haves"] and re.search(pattern, t):
             out["must_haves"].append(label)
             out["detected"].append(f"must have: {label}")
 
@@ -222,7 +185,7 @@ def parse_llm(text: str) -> dict | None:
         out["must_haves"] = [str(s)[:60] for s in data.get("must_haves", [])][:8]
 
         for bucket in ("amenities", "nearby", "types"):
-            out["detected"] += [_LABELS[bucket][k] for k in out[bucket]]
+            out["detected"] += [_LABELS.get(bucket, {}).get(k, k) for k in out[bucket]]
         if out["vibe"]:
             out["detected"].append(f"{out['vibe']} street vibe")
         for axis, delta in out["weight_nudges"].items():
