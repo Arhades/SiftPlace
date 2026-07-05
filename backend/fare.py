@@ -15,13 +15,13 @@ Drop this in backend/ and call monthly_commute() from the scoring/fare logic.
 RATES = {
     "car": {                                  # Grab/Bolt economy car
         "avg_speed_kmh": 16,                  # Bangkok traffic
-        "grab": {"base": 45, "per_km": 10.0, "per_min": 1.5, "min": 60},
-        "bolt": {"base": 38, "per_km": 8.5,  "per_min": 1.2, "min": 50},
+        "grab": {"base": 45, "per_km": 10.0, "per_min": 1.5, "min": 60}
+        #"bolt": {"base": 38, "per_km": 8.5,  "per_min": 1.2, "min": 50},
     },
     "bike": {                                 # motorbike taxi: cheaper, faster
         "avg_speed_kmh": 23,                  # lane-splits the traffic
-        "grab": {"base": 15, "per_km": 6.0, "per_min": 0.5, "min": 25},
-        "bolt": {"base": 12, "per_km": 5.5, "per_min": 0.4, "min": 22},
+        "grab": {"base": 15, "per_km": 6.0, "per_min": 0.5, "min": 25}
+        #"bolt": {"base": 12, "per_km": 5.5, "per_min": 0.4, "min": 22},
     },
 }
 SURGE_DEFAULT = 1.0       # peak hours / rain typically 1.2-1.5
