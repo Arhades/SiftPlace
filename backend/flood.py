@@ -1,5 +1,6 @@
 """Seasonal flood-risk indicator from free open data (Open-Meteo, no API key).
 
+<<<<<<< Updated upstream
 Heuristic, deliberately rough and tunable: Bangkok floods when heavy monsoon
 rain meets low-lying ground. Points model (all thresholds live in CONFIG):
 
@@ -18,6 +19,33 @@ changes, so it is cached with a long TTL (coarse coordinate buckets) to respect
 the free API. If the data is unavailable we fall back to a season-only estimate.
 
 This is a rough screening signal for students, not a hydrological model.
+=======
+Bangkok floods when heavy monsoon rain meets low-lying ground. Instead of a
+7-day forecast (too short to matter for a 3-6 month stay) we now score the
+MONTH, blending three signals into simple points:
+
+  * season base:      Sep-Oct (peak flood window)  -> +2
+                       May-Aug (monsoon ramp-up)    -> +1
+                       any other month              -> +0
+  * low-lying ground:  elevation <= 4 m above sea   -> +1
+                       (Open-Meteo elevation API; much of Bangkok is ~1-2 m)
+  * heavy rain expected this month (Open-Meteo seasonal outlook), measured as
+    the share of the month's days with heavy rainfall — highest tier only:
+                       > 50% of days -> +3
+                       > 33% of days -> +2
+                       > 10% of days -> +1
+
+  total points:        0-2 -> "low"   3-5 -> "moderate"   6+ -> "high"
+
+ALL thresholds live in CONFIG below — this is a rough screening signal for
+students, not a hydrological model. Fail-safe: if the seasonal outlook is
+unavailable we fall back to a season-only estimate, and flood_risk() never
+raises.
+
+Results are cached twice (in-process dict + the persistent SQLite cache) on
+coarse coordinate buckets with a long TTL, because seasonal data changes
+slowly and Open-Meteo's free tier is a shared resource.
+>>>>>>> Stashed changes
 """
 from __future__ import annotations
 
@@ -27,6 +55,7 @@ import time
 
 import requests
 
+<<<<<<< Updated upstream
 from usage import count_api_call
 
 CONFIG = {
@@ -90,6 +119,73 @@ def _fetch_monthly_heavy_pcts(lat: float, lon: float) -> dict[int, float] | None
         daily = resp.json().get("daily") or {}
         dates = daily.get("time") or []
         rain_mm = daily.get("precipitation_sum") or []
+=======
+from cache_store import cache_get, cache_set
+from usage import count_api_call
+
+CONFIG = {
+    # season base points (Bangkok climatology)
+    "peak_months": (9, 10),          # peak rainy season -> +2
+    "peak_points": 2,
+    "monsoon_months": (5, 6, 7, 8),  # monsoon ramp-up -> +1
+    "monsoon_points": 1,
+    # elevation (m): low-lying ground drains poorly -> +1
+    "low_elevation_m": 4,
+    "low_elevation_points": 1,
+    # "heavy rain in the month": share of the month's days whose rainfall is
+    # at least `heavy_day_mm`, estimated from the seasonal outlook's ensemble.
+    "heavy_day_mm": 20,
+    # (minimum share, points) — checked top-down, highest matching tier only
+    "heavy_share_tiers": ((0.50, 3), (0.33, 2), (0.10, 1)),
+    # risk bands over total points
+    "moderate_from_points": 3,
+    "high_from_points": 6,
+    # how many upcoming days to expose for the frontend's little rain chart
+    "chart_days": 7,
+    # seasonal data changes slowly — cache for a day to spare the free API
+    "cache_ttl_s": 24 * 3600,
+    "elevation_ttl_s": 30 * 24 * 3600,  # the ground does not move
+}
+
+SEASONAL_URL = "https://seasonal-api.open-meteo.com/v1/seasonal"
+ELEVATION_URL = "https://api.open-meteo.com/v1/elevation"
+
+_memory_lock = threading.Lock()
+_memory_cache: dict[tuple, tuple[float, dict]] = {}
+
+
+def _bucket(lat: float, lon: float) -> tuple:
+    """~2 km buckets so nearby listings share one seasonal-outlook call."""
+    return (round(lat * 50) / 50, round(lon * 50) / 50)
+
+
+# --- outbound fetches (each cached in the persistent store) --------------------
+
+def _fetch_seasonal_daily(lat: float, lon: float) -> dict | None:
+    """Daily precipitation from Open-Meteo's seasonal outlook (ECMWF ensemble).
+
+    Returns the raw "daily" block: {"time": [dates...],
+    "precipitation_sum": [ensemble mean...], "precipitation_sum_member01": [...], ...}
+    or None when the API is unreachable (callers then use season-only scoring).
+    """
+    cache_key = f"{_bucket(lat, lon)}"
+    cached = cache_get("seasonal", cache_key)
+    if cached is not None:
+        return cached
+    try:
+        count_api_call("open-meteo")
+        response = requests.get(SEASONAL_URL, params={
+            "latitude": lat,
+            "longitude": lon,
+            "daily": "precipitation_sum",
+            "forecast_days": 45,  # covers the rest of any month + the chart
+        }, timeout=15)
+        response.raise_for_status()
+        daily = response.json().get("daily") or None
+        if daily:
+            cache_set("seasonal", cache_key, daily, CONFIG["cache_ttl_s"])
+        return daily
+>>>>>>> Stashed changes
     except Exception:
         return None
 
@@ -128,17 +224,33 @@ def _heavy_rain_pct(lat: float, lon: float, month: int) -> float | None:
 
 
 def _fetch_elevation(lat: float, lon: float) -> float | None:
+    cache_key = f"{_bucket(lat, lon)}"
+    cached = cache_get("elevation", cache_key)
+    if cached is not None:
+        return float(cached)
     try:
         count_api_call("open-meteo")
+<<<<<<< Updated upstream
         resp = requests.get(ELEVATION_URL,
                             params={"latitude": lat, "longitude": lon}, timeout=10)
         resp.raise_for_status()
         elevation = (resp.json().get("elevation") or [None])[0]
         return float(elevation) if elevation is not None else None
+=======
+        response = requests.get(ELEVATION_URL,
+                                params={"latitude": lat, "longitude": lon}, timeout=10)
+        response.raise_for_status()
+        elevation = (response.json().get("elevation") or [None])[0]
+        if elevation is None:
+            return None
+        cache_set("elevation", cache_key, float(elevation), CONFIG["elevation_ttl_s"])
+        return float(elevation)
+>>>>>>> Stashed changes
     except Exception:
         return None
 
 
+<<<<<<< Updated upstream
 def _season_points(month: int) -> tuple[int, str | None, str]:
     """(points, reason, season label) for the calendar month."""
     if month in CONFIG["peak_months"]:
@@ -203,15 +315,158 @@ def flood_risk(lat: float, lon: float, month: int | None = None) -> dict:
     if points >= CONFIG["points_high"]:
         risk = "high"
     elif points >= CONFIG["points_moderate"]:
+=======
+# --- turning the seasonal ensemble into "share of heavy-rain days" -------------
+
+def _heavy_rain_share(daily: dict, month: int) -> float | None:
+    """Estimate which share of this month's days will see heavy rain.
+
+    The seasonal API returns ~50 ensemble members (possible futures). For each
+    member we count its heavy days (>= heavy_day_mm) within the current month,
+    then average the shares across members. That reads as "the model expects
+    heavy rain on X% of the month's days".
+    """
+    dates = daily.get("time") or []
+    month_indexes = []
+    for i, iso_date in enumerate(dates):
+        try:
+            if dt.date.fromisoformat(iso_date).month == month:
+                month_indexes.append(i)
+        except ValueError:
+            continue
+    if not month_indexes:
+        return None
+
+    member_keys = [k for k in daily
+                   if k.startswith("precipitation_sum_member") and daily.get(k)]
+    if not member_keys:  # no ensemble? fall back to the mean series
+        member_keys = ["precipitation_sum"] if daily.get("precipitation_sum") else []
+    if not member_keys:
+        return None
+
+    threshold = CONFIG["heavy_day_mm"]
+    member_shares = []
+    for key in member_keys:
+        series = daily[key]
+        heavy_days = 0
+        counted_days = 0
+        for i in month_indexes:
+            if i >= len(series) or series[i] is None:
+                continue
+            counted_days += 1
+            if float(series[i]) >= threshold:
+                heavy_days += 1
+        if counted_days:
+            member_shares.append(heavy_days / counted_days)
+    if not member_shares:
+        return None
+    return sum(member_shares) / len(member_shares)
+
+
+def _chart_days(daily: dict) -> list[dict]:
+    """First few days of the outlook for the frontend's rain bars.
+
+    rain_mm is the ensemble MEAN; prob is the share of ensemble members that
+    predict a heavy-rain day (a rough "chance of a downpour").
+    """
+    dates = daily.get("time") or []
+    mean_series = daily.get("precipitation_sum") or []
+    member_keys = [k for k in daily if k.startswith("precipitation_sum_member")]
+    threshold = CONFIG["heavy_day_mm"]
+
+    days = []
+    for i, iso_date in enumerate(dates[: CONFIG["chart_days"]]):
+        rain_mm = float(mean_series[i] or 0) if i < len(mean_series) else 0.0
+        heavy_votes = 0
+        voters = 0
+        for key in member_keys:
+            series = daily.get(key) or []
+            if i < len(series) and series[i] is not None:
+                voters += 1
+                if float(series[i]) >= threshold:
+                    heavy_votes += 1
+        probability = round(100 * heavy_votes / voters) if voters else 0
+        days.append({"date": iso_date, "rain_mm": round(rain_mm, 1), "prob": probability})
+    return days
+
+
+# --- the indicator ---------------------------------------------------------------
+
+def flood_risk(lat: float, lon: float, month: int | None = None) -> dict:
+    """Blend season + elevation + the month's heavy-rain outlook into points.
+
+    Returns {risk, reasons[], season, heavy_rain_pct, week_rain_mm, max_day_mm,
+             elevation_m, daily: [{date, rain_mm, prob}], source}. `heavy_rain_pct`
+    is the share (0-100) of the month's days expected to see heavy rain, or None
+    when the seasonal outlook was unavailable. Never raises.
+    """
+    bucket = _bucket(lat, lon)
+    now = time.time()
+    with _memory_lock:
+        hit = _memory_cache.get(bucket)
+        if hit and now - hit[0] < CONFIG["cache_ttl_s"]:
+            return hit[1]
+
+    month = month or dt.date.today().month
+    seasonal = _fetch_seasonal_daily(lat, lon)
+    elevation = _fetch_elevation(lat, lon)
+
+    config = CONFIG
+    points = 0
+    reasons: list[str] = []
+
+    # 1) season base points (climatology — always available)
+    in_peak = month in config["peak_months"]
+    in_monsoon = month in config["monsoon_months"]
+    if in_peak:
+        points += config["peak_points"]
+        reasons.append("peak rainy season (Sep–Oct) — Bangkok's flood window")
+    elif in_monsoon:
+        points += config["monsoon_points"]
+        reasons.append("monsoon season (May–Aug)")
+
+    # 2) heavy rain expected this month (seasonal outlook; highest tier only)
+    heavy_share = _heavy_rain_share(seasonal, month) if seasonal else None
+    if heavy_share is None:
+        reasons.append("seasonal rain outlook unavailable — season-only estimate")
+    else:
+        for min_share, tier_points in config["heavy_share_tiers"]:
+            if heavy_share > min_share:
+                points += tier_points
+                reasons.append(
+                    f"heavy rain (≥{config['heavy_day_mm']} mm) expected on "
+                    f"~{round(heavy_share * 100)}% of days this month")
+                break
+
+    # 3) low-lying ground drains poorly
+    if elevation is not None and elevation <= config["low_elevation_m"]:
+        points += config["low_elevation_points"]
+        reasons.append(f"low-lying ground (~{round(elevation)} m above sea level)")
+
+    if points >= config["high_from_points"]:
+        risk = "high"
+    elif points >= config["moderate_from_points"]:
+>>>>>>> Stashed changes
         risk = "moderate"
     else:
         risk = "low"
     if not reasons:
+<<<<<<< Updated upstream
         reasons.append("outside the rainy season, little heavy rain expected")
+=======
+        reasons.append("dry season — little heavy rain expected this month")
+
+    # keep the pre-seasonal response fields alive for the frontend: a short
+    # daily outlook for the rain chart plus its 7-day total / wettest day
+    days = _chart_days(seasonal) if seasonal else []
+    week_rain = sum(d["rain_mm"] for d in days)
+    max_day = max((d["rain_mm"] for d in days), default=0.0)
+>>>>>>> Stashed changes
 
     out = {
         "risk": risk,
         "reasons": reasons,
+<<<<<<< Updated upstream
         "season": season,
         "month": month,
         "heavy_rain_pct": heavy_pct,
@@ -225,4 +480,16 @@ def flood_risk(lat: float, lon: float, month: int | None = None) -> dict:
     }
     with _lock:
         _cache[cache_key] = (now, out)
+=======
+        "season": "peak" if in_peak else ("monsoon" if in_monsoon else "dry"),
+        "heavy_rain_pct": round(heavy_share * 100) if heavy_share is not None else None,
+        "week_rain_mm": round(week_rain, 1),
+        "max_day_mm": round(max_day, 1),
+        "elevation_m": elevation,
+        "daily": days,
+        "source": "open-meteo.com seasonal outlook (heuristic indicator, not a hydrological model)",
+    }
+    with _memory_lock:
+        _memory_cache[bucket] = (now, out)
+>>>>>>> Stashed changes
     return out

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 """Warm the persistent API cache for the key Bangkok areas.
 
 Run this periodically (e.g. once a day via cron / Task Scheduler):
@@ -19,12 +20,31 @@ Scaling note: if volume ever outgrows this, the next steps are self-hosting
 Overpass + Nominatim (both have official Docker images) or moving to paid
 providers; the affiliate listing feeds also carry their own inventory, which
 cuts the Overpass reliance further.
+=======
+"""Pre-warm the persistent API cache for the key Bangkok areas.
+
+Run this once a day (Windows Task Scheduler / cron):
+
+    cd backend && .venv/Scripts/python precompute.py
+
+Why: student searches cluster around a handful of Bangkok neighbourhoods. By
+fetching each area's lodging + POIs (and its flood/seasonal data) here, a real
+user's search is served from the SQLite cache (cache_store.py) instead of
+hitting Overpass/Open-Meteo live — the free APIs only ever see this script's
+slow, once-a-day traffic plus rare cache misses.
+
+The script simply calls the same functions the live search uses; their
+internal caching does the storing, so the cache keys always match real
+searches. It warms every radius the adaptive-radius logic can produce from the
+frontend's default base radius (see search.adaptive_radius).
+>>>>>>> Stashed changes
 """
 from __future__ import annotations
 
 import sys
 import time
 
+<<<<<<< Updated upstream
 from osm import RADIUS_STEPS_M, TAGS, fetch_accommodations, fetch_pois
 
 # name -> (lat, lon). Student-relevant Bangkok anchors: campuses, transit
@@ -76,6 +96,65 @@ def main() -> int:
         time.sleep(PAUSE_BETWEEN_AREAS_S)
     print("done — user searches in these areas now serve from the cache.")
     return 0
+=======
+from flood import flood_risk
+from osm import TAGS, fetch_accommodations, fetch_pois
+
+# Student-relevant Bangkok anchors: campuses + popular living areas.
+AREAS = {
+    "Siam / Chulalongkorn": (13.7367, 100.5231),
+    "Thammasat (Tha Prachan)": (13.7573, 100.4908),
+    "Kasetsart University": (13.8476, 100.5696),
+    "Victory Monument / Phaya Thai": (13.7649, 100.5383),
+    "Ari": (13.7797, 100.5423),
+    "Sukhumvit / Asok": (13.7380, 100.5608),
+    "Thonglor / Ekkamai": (13.7266, 100.5786),
+    "On Nut": (13.7056, 100.6011),
+    "Silom / Sathorn": (13.7262, 100.5232),
+    "Ladprao / Chatuchak": (13.8160, 100.5610),
+    "Ramkhamhaeng": (13.7559, 100.6156),
+}
+
+# The adaptive radius turns the frontend's default 2500 m base into one of
+# these (factor 1.0 / 1.7 / 2.4, hard-capped) — warm all three so any weight
+# profile hits the cache. POI queries add a 1000 m margin (see search.py).
+BASE_RADIUS_M = 2500
+RADII_M = (2500, 4250, 6000)
+ACCOM_LIMIT = 30  # the /search default for max_listings
+
+
+def warm_area(name: str, lat: float, lon: float) -> int:
+    """Fetch everything one area needs; return how many calls were made
+    (cache hits included — the point is the cache ends up full)."""
+    calls = 0
+    for radius in RADII_M:
+        accoms = fetch_accommodations(lat, lon, radius, ACCOM_LIMIT)
+        calls += 1
+        pois = fetch_pois(lat, lon, list(TAGS), radius + 1000)
+        calls += len(TAGS)
+        print(f"    r={radius} m: {len(accoms)} lodgings, "
+              f"{sum(len(v) for v in pois.values())} POIs")
+        # be extra gentle: pause between the big area queries
+        time.sleep(1)
+    flood_risk(lat, lon)  # warms the seasonal outlook + elevation caches too
+    return calls
+
+
+def main() -> int:
+    started = time.time()
+    print(f"Warming {len(AREAS)} areas x {len(RADII_M)} radii "
+          f"({len(TAGS)} POI kinds each)...")
+    failures = 0
+    for name, (lat, lon) in AREAS.items():
+        print(f"  {name}")
+        try:
+            warm_area(name, lat, lon)
+        except Exception as exc:  # keep going — a bad area shouldn't stop the rest
+            failures += 1
+            print(f"    FAILED: {type(exc).__name__}: {exc}")
+    print(f"Done in {round(time.time() - started)}s, {failures} area(s) failed.")
+    return 1 if failures == len(AREAS) else 0
+>>>>>>> Stashed changes
 
 
 if __name__ == "__main__":

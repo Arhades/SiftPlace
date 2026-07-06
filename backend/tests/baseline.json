@@ -1,0 +1,1554 @@
+{
+ "clamp": [
+  0.0,
+  0.5,
+  5
+ ],
+ "distance_score": [
+  1.0,
+  1.0,
+  0.7058823529411764,
+  0.0,
+  0.0
+ ],
+ "fare": [
+  {
+   "in": [
+    0.5,
+    "car",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 2580,
+    "monthly_hours": 1.4,
+    "one_way_min": 2,
+    "one_way_thb": 60
+   },
+   "one_way": [
+    60,
+    2
+   ]
+  },
+  {
+   "in": [
+    0.5,
+    "car",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 2967,
+    "monthly_hours": 1.4,
+    "one_way_min": 2,
+    "one_way_thb": 69
+   },
+   "one_way": [
+    69,
+    2
+   ]
+  },
+  {
+   "in": [
+    0.5,
+    "car",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 2150,
+    "monthly_hours": 1.4,
+    "one_way_min": 2,
+    "one_way_thb": 50
+   },
+   "one_way": [
+    50,
+    2
+   ]
+  },
+  {
+   "in": [
+    0.5,
+    "car",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 2494,
+    "monthly_hours": 1.4,
+    "one_way_min": 2,
+    "one_way_thb": 58
+   },
+   "one_way": [
+    58,
+    2
+   ]
+  },
+  {
+   "in": [
+    0.5,
+    "bike",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 1075,
+    "monthly_hours": 0.7,
+    "one_way_min": 1,
+    "one_way_thb": 25
+   },
+   "one_way": [
+    25,
+    1
+   ]
+  },
+  {
+   "in": [
+    0.5,
+    "bike",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 1075,
+    "monthly_hours": 0.7,
+    "one_way_min": 1,
+    "one_way_thb": 25
+   },
+   "one_way": [
+    25,
+    1
+   ]
+  },
+  {
+   "in": [
+    0.5,
+    "bike",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 946,
+    "monthly_hours": 0.7,
+    "one_way_min": 1,
+    "one_way_thb": 22
+   },
+   "one_way": [
+    22,
+    1
+   ]
+  },
+  {
+   "in": [
+    0.5,
+    "bike",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 946,
+    "monthly_hours": 0.7,
+    "one_way_min": 1,
+    "one_way_thb": 22
+   },
+   "one_way": [
+    22,
+    1
+   ]
+  },
+  {
+   "in": [
+    3,
+    "car",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 3956,
+    "monthly_hours": 7.9,
+    "one_way_min": 11,
+    "one_way_thb": 92
+   },
+   "one_way": [
+    92,
+    11
+   ]
+  },
+  {
+   "in": [
+    3,
+    "car",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 5117,
+    "monthly_hours": 7.9,
+    "one_way_min": 11,
+    "one_way_thb": 119
+   },
+   "one_way": [
+    119,
+    11
+   ]
+  },
+  {
+   "in": [
+    3,
+    "car",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 3311,
+    "monthly_hours": 7.9,
+    "one_way_min": 11,
+    "one_way_thb": 77
+   },
+   "one_way": [
+    77,
+    11
+   ]
+  },
+  {
+   "in": [
+    3,
+    "car",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 4300,
+    "monthly_hours": 7.9,
+    "one_way_min": 11,
+    "one_way_thb": 100
+   },
+   "one_way": [
+    100,
+    11
+   ]
+  },
+  {
+   "in": [
+    3,
+    "bike",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 1591,
+    "monthly_hours": 5.7,
+    "one_way_min": 8,
+    "one_way_thb": 37
+   },
+   "one_way": [
+    37,
+    8
+   ]
+  },
+  {
+   "in": [
+    3,
+    "bike",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 2064,
+    "monthly_hours": 5.7,
+    "one_way_min": 8,
+    "one_way_thb": 48
+   },
+   "one_way": [
+    48,
+    8
+   ]
+  },
+  {
+   "in": [
+    3,
+    "bike",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 1376,
+    "monthly_hours": 5.7,
+    "one_way_min": 8,
+    "one_way_thb": 32
+   },
+   "one_way": [
+    32,
+    8
+   ]
+  },
+  {
+   "in": [
+    3,
+    "bike",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 1763,
+    "monthly_hours": 5.7,
+    "one_way_min": 8,
+    "one_way_thb": 41
+   },
+   "one_way": [
+    41,
+    8
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "car",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 7439,
+    "monthly_hours": 22.2,
+    "one_way_min": 31,
+    "one_way_thb": 173
+   },
+   "one_way": [
+    173,
+    31
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "car",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 9675,
+    "monthly_hours": 22.2,
+    "one_way_min": 31,
+    "one_way_thb": 225
+   },
+   "one_way": [
+    225,
+    31
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "car",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 6235,
+    "monthly_hours": 22.2,
+    "one_way_min": 31,
+    "one_way_thb": 145
+   },
+   "one_way": [
+    145,
+    31
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "car",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 8084,
+    "monthly_hours": 22.2,
+    "one_way_min": 31,
+    "one_way_thb": 188
+   },
+   "one_way": [
+    188,
+    31
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "bike",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 3225,
+    "monthly_hours": 15.1,
+    "one_way_min": 21,
+    "one_way_thb": 75
+   },
+   "one_way": [
+    75,
+    21
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "bike",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 4171,
+    "monthly_hours": 15.1,
+    "one_way_min": 21,
+    "one_way_thb": 97
+   },
+   "one_way": [
+    97,
+    21
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "bike",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 2838,
+    "monthly_hours": 15.1,
+    "one_way_min": 21,
+    "one_way_thb": 66
+   },
+   "one_way": [
+    66,
+    21
+   ]
+  },
+  {
+   "in": [
+    8.2,
+    "bike",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 3655,
+    "monthly_hours": 15.1,
+    "one_way_min": 21,
+    "one_way_thb": 85
+   },
+   "one_way": [
+    85,
+    21
+   ]
+  },
+  {
+   "in": [
+    15,
+    "car",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 11997,
+    "monthly_hours": 40.1,
+    "one_way_min": 56,
+    "one_way_thb": 279
+   },
+   "one_way": [
+    279,
+    56
+   ]
+  },
+  {
+   "in": [
+    15,
+    "car",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 15609,
+    "monthly_hours": 40.1,
+    "one_way_min": 56,
+    "one_way_thb": 363
+   },
+   "one_way": [
+    363,
+    56
+   ]
+  },
+  {
+   "in": [
+    15,
+    "car",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 10019,
+    "monthly_hours": 40.1,
+    "one_way_min": 56,
+    "one_way_thb": 233
+   },
+   "one_way": [
+    233,
+    56
+   ]
+  },
+  {
+   "in": [
+    15,
+    "car",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 13029,
+    "monthly_hours": 40.1,
+    "one_way_min": 56,
+    "one_way_thb": 303
+   },
+   "one_way": [
+    303,
+    56
+   ]
+  },
+  {
+   "in": [
+    15,
+    "bike",
+    "grab",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 5375,
+    "monthly_hours": 27.9,
+    "one_way_min": 39,
+    "one_way_thb": 125
+   },
+   "one_way": [
+    125,
+    39
+   ]
+  },
+  {
+   "in": [
+    15,
+    "bike",
+    "grab",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 6966,
+    "monthly_hours": 27.9,
+    "one_way_min": 39,
+    "one_way_thb": 162
+   },
+   "one_way": [
+    162,
+    39
+   ]
+  },
+  {
+   "in": [
+    15,
+    "bike",
+    "bolt",
+    1.0
+   ],
+   "monthly": {
+    "monthly_fare_thb": 4730,
+    "monthly_hours": 27.9,
+    "one_way_min": 39,
+    "one_way_thb": 110
+   },
+   "one_way": [
+    110,
+    39
+   ]
+  },
+  {
+   "in": [
+    15,
+    "bike",
+    "bolt",
+    1.3
+   ],
+   "monthly": {
+    "monthly_fare_thb": 6149,
+    "monthly_hours": 27.9,
+    "one_way_min": 39,
+    "one_way_thb": 143
+   },
+   "one_way": [
+    143,
+    39
+   ]
+  },
+  {
+   "in": "both_modes(8.2, 3, bolt)",
+   "out": {
+    "bike": {
+     "monthly_fare_thb": 1703,
+     "monthly_hours": 9.0,
+     "one_way_min": 21,
+     "one_way_thb": 66
+    },
+    "car": {
+     "monthly_fare_thb": 3741,
+     "monthly_hours": 13.3,
+     "one_way_min": 31,
+     "one_way_thb": 145
+    }
+   }
+  }
+ ],
+ "haversine": [
+  8463.134108106402,
+  0.0,
+  343127.8778235353
+ ],
+ "osm_coords": [
+  [
+   13.7,
+   100.5
+  ],
+  [
+   13.8,
+   100.6
+  ],
+  [
+   null,
+   null
+  ]
+ ],
+ "osm_nearest": [
+  189,
+  null
+ ],
+ "parse_rules": [
+  {
+   "amenities": [],
+   "detected": [],
+   "engine": "rules",
+   "must_haves": [],
+   "nearby": [],
+   "types": [],
+   "vibe": null,
+   "weight_nudges": {
+    "cost": 0,
+    "living": 0,
+    "location": 0
+   }
+  },
+  {
+   "amenities": [
+    "wifi",
+    "desk"
+   ],
+   "detected": [
+    "fast wifi",
+    "study desk",
+    "train/metro nearby",
+    "quiet street vibe"
+   ],
+   "engine": "rules",
+   "must_haves": [],
+   "nearby": [
+    "transit"
+   ],
+   "types": [],
+   "vibe": "quiet",
+   "weight_nudges": {
+    "cost": 0,
+    "living": 0,
+    "location": 0
+   }
+  },
+  {
+   "amenities": [],
+   "detected": [
+    "supermarket nearby",
+    "market nearby",
+    "more weight on cost",
+    "more weight on location"
+   ],
+   "engine": "rules",
+   "must_haves": [],
+   "nearby": [
+    "supermarket",
+    "flea_market"
+   ],
+   "types": [],
+   "vibe": null,
+   "weight_nudges": {
+    "cost": 2,
+    "living": 0,
+    "location": 2
+   }
+  },
+  {
+   "amenities": [
+    "gympool"
+   ],
+   "detected": [
+    "building gym/pool",
+    "condo/apartment",
+    "less weight on cost",
+    "more weight on living",
+    "must have: pet friendly"
+   ],
+   "engine": "rules",
+   "must_haves": [
+    "pet friendly"
+   ],
+   "nearby": [],
+   "types": [
+    "condo"
+   ],
+   "vibe": null,
+   "weight_nudges": {
+    "cost": -2,
+    "living": 2,
+    "location": 0
+   }
+  },
+  {
+   "amenities": [
+    "kitchen",
+    "laundry"
+   ],
+   "detected": [
+    "kitchen",
+    "laundry",
+    "hostel",
+    "less weight on location"
+   ],
+   "engine": "rules",
+   "must_haves": [],
+   "nearby": [],
+   "types": [
+    "hostel"
+   ],
+   "vibe": null,
+   "weight_nudges": {
+    "cost": 0,
+    "living": 0,
+    "location": -2
+   }
+  }
+ ],
+ "ranked": [
+  [
+   {
+    "area": "On Nut",
+    "badge": null,
+    "commute_cost": 7611,
+    "commute_min": 32,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 3311,
+      "monthly_hours": 15.8,
+      "one_way_min": 22,
+      "one_way_thb": 77
+     },
+     "car": {
+      "monthly_fare_thb": 7611,
+      "monthly_hours": 22.9,
+      "one_way_min": 32,
+      "one_way_thb": 177
+     }
+    },
+    "lat": 13.705,
+    "lon": 100.601,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "gym",
+     "supermarket"
+    ],
+    "mode": "car",
+    "monthly_fare": 7611,
+    "monthly_hours": 22.9,
+    "name": "Priced Condo",
+    "offers": [],
+    "one_way_fare": 177,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 72,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.59,
+     "living": 0.74,
+     "location": 0.84
+    },
+    "time_cost": null,
+    "true_cost": 19611,
+    "true_cost_incl_time": null,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "Ari",
+    "badge": null,
+    "commute_cost": 5160,
+    "commute_min": 18,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 2150,
+      "monthly_hours": 8.6,
+      "one_way_min": 12,
+      "one_way_thb": 50
+     },
+     "car": {
+      "monthly_fare_thb": 5160,
+      "monthly_hours": 12.9,
+      "one_way_min": 18,
+      "one_way_thb": 120
+     }
+    },
+    "lat": 13.779,
+    "lon": 100.545,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "supermarket"
+    ],
+    "mode": "car",
+    "monthly_fare": 5160,
+    "monthly_hours": 12.9,
+    "name": "Star Hostel",
+    "offers": [],
+    "one_way_fare": 120,
+    "price_known": true,
+    "rent": 6500,
+    "reviews": [],
+    "score": 68,
+    "source": "mock",
+    "sources": [],
+    "stars": 4.0,
+    "subscores": {
+     "cost": 1.0,
+     "living": 0.51,
+     "location": 0.47
+    },
+    "time_cost": null,
+    "true_cost": 11660,
+    "true_cost_incl_time": null,
+    "type": "hostel",
+    "vibe": "lively"
+   }
+  ],
+  [
+   {
+    "area": "On Nut",
+    "badge": null,
+    "commute_cost": 2881,
+    "commute_min": 22,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 2881,
+      "monthly_hours": 15.8,
+      "one_way_min": 22,
+      "one_way_thb": 67
+     },
+     "car": {
+      "monthly_fare_thb": 6364,
+      "monthly_hours": 22.9,
+      "one_way_min": 32,
+      "one_way_thb": 148
+     }
+    },
+    "lat": 13.705,
+    "lon": 100.601,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "gym",
+     "supermarket"
+    ],
+    "mode": "bike",
+    "monthly_fare": 2881,
+    "monthly_hours": 15.8,
+    "name": "Priced Condo",
+    "offers": [],
+    "one_way_fare": 67,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 92,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.95,
+     "living": 0.74,
+     "location": 0.84
+    },
+    "time_cost": 1580,
+    "true_cost": 14881,
+    "true_cost_incl_time": 16461,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "Ari",
+    "badge": null,
+    "commute_cost": 1849,
+    "commute_min": 12,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1849,
+      "monthly_hours": 8.6,
+      "one_way_min": 12,
+      "one_way_thb": 43
+     },
+     "car": {
+      "monthly_fare_thb": 4300,
+      "monthly_hours": 12.9,
+      "one_way_min": 18,
+      "one_way_thb": 100
+     }
+    },
+    "lat": 13.779,
+    "lon": 100.545,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "supermarket"
+    ],
+    "mode": "bike",
+    "monthly_fare": 1849,
+    "monthly_hours": 8.6,
+    "name": "Star Hostel",
+    "offers": [],
+    "one_way_fare": 43,
+    "price_known": true,
+    "rent": 6500,
+    "reviews": [],
+    "score": 89,
+    "source": "mock",
+    "sources": [],
+    "stars": 4.0,
+    "subscores": {
+     "cost": 1.0,
+     "living": 0.51,
+     "location": 0.47
+    },
+    "time_cost": 860,
+    "true_cost": 8349,
+    "true_cost_incl_time": 9209,
+    "type": "hostel",
+    "vibe": "lively"
+   }
+  ],
+  [
+   {
+    "area": "On Nut",
+    "badge": null,
+    "commute_cost": 7611,
+    "commute_min": 32,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 3311,
+      "monthly_hours": 15.8,
+      "one_way_min": 22,
+      "one_way_thb": 77
+     },
+     "car": {
+      "monthly_fare_thb": 7611,
+      "monthly_hours": 22.9,
+      "one_way_min": 32,
+      "one_way_thb": 177
+     }
+    },
+    "lat": 13.705,
+    "lon": 100.601,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 7611,
+    "monthly_hours": 22.9,
+    "name": "Priced Condo",
+    "offers": [],
+    "one_way_fare": 177,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 52,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.59,
+     "living": 0.42,
+     "location": 0.51
+    },
+    "time_cost": null,
+    "true_cost": 19611,
+    "true_cost_incl_time": null,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "",
+    "badge": null,
+    "commute_cost": 2580,
+    "commute_min": 3,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1075,
+      "monthly_hours": 1.4,
+      "one_way_min": 2,
+      "one_way_thb": 25
+     },
+     "car": {
+      "monthly_fare_thb": 2580,
+      "monthly_hours": 2.1,
+      "one_way_min": 3,
+      "one_way_thb": 60
+     }
+    },
+    "lat": 13.745,
+    "lon": 100.535,
+    "matched_amenities": [],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 2580,
+    "monthly_hours": 2.1,
+    "name": "OSM Hotel",
+    "offers": [],
+    "one_way_fare": 60,
+    "price_known": false,
+    "rent": null,
+    "reviews": [],
+    "score": 48,
+    "source": "osm",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.5,
+     "living": 0.47,
+     "location": 0.47
+    },
+    "time_cost": null,
+    "true_cost": null,
+    "true_cost_incl_time": null,
+    "type": "hotel",
+    "vibe": null
+   }
+  ]
+ ],
+ "scored": [
+  [
+   {
+    "area": "On Nut",
+    "badge": null,
+    "commute_cost": 7611,
+    "commute_min": 32,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 3311,
+      "monthly_hours": 15.8,
+      "one_way_min": 22,
+      "one_way_thb": 77
+     },
+     "car": {
+      "monthly_fare_thb": 7611,
+      "monthly_hours": 22.9,
+      "one_way_min": 32,
+      "one_way_thb": 177
+     }
+    },
+    "lat": 13.705,
+    "lon": 100.601,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "gym",
+     "supermarket"
+    ],
+    "mode": "car",
+    "monthly_fare": 7611,
+    "monthly_hours": 22.9,
+    "name": "Priced Condo",
+    "offers": [],
+    "one_way_fare": 177,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 72,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.59,
+     "living": 0.74,
+     "location": 0.84
+    },
+    "time_cost": null,
+    "true_cost": 19611,
+    "true_cost_incl_time": null,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "",
+    "badge": null,
+    "commute_cost": 2580,
+    "commute_min": 3,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1075,
+      "monthly_hours": 1.4,
+      "one_way_min": 2,
+      "one_way_thb": 25
+     },
+     "car": {
+      "monthly_fare_thb": 2580,
+      "monthly_hours": 2.1,
+      "one_way_min": 3,
+      "one_way_thb": 60
+     }
+    },
+    "lat": 13.745,
+    "lon": 100.535,
+    "matched_amenities": [],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 2580,
+    "monthly_hours": 2.1,
+    "name": "OSM Hotel",
+    "offers": [],
+    "one_way_fare": 60,
+    "price_known": false,
+    "rent": null,
+    "reviews": [],
+    "score": 35,
+    "source": "osm",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.5,
+     "living": 0.49,
+     "location": 0.12
+    },
+    "time_cost": null,
+    "true_cost": null,
+    "true_cost_incl_time": null,
+    "type": "hotel",
+    "vibe": null
+   },
+   {
+    "area": "Ari",
+    "badge": null,
+    "commute_cost": 5160,
+    "commute_min": 18,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 2150,
+      "monthly_hours": 8.6,
+      "one_way_min": 12,
+      "one_way_thb": 50
+     },
+     "car": {
+      "monthly_fare_thb": 5160,
+      "monthly_hours": 12.9,
+      "one_way_min": 18,
+      "one_way_thb": 120
+     }
+    },
+    "lat": 13.779,
+    "lon": 100.545,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "supermarket"
+    ],
+    "mode": "car",
+    "monthly_fare": 5160,
+    "monthly_hours": 12.9,
+    "name": "Star Hostel",
+    "offers": [],
+    "one_way_fare": 120,
+    "price_known": true,
+    "rent": 6500,
+    "reviews": [],
+    "score": 68,
+    "source": "mock",
+    "sources": [],
+    "stars": 4.0,
+    "subscores": {
+     "cost": 1.0,
+     "living": 0.51,
+     "location": 0.47
+    },
+    "time_cost": null,
+    "true_cost": 11660,
+    "true_cost_incl_time": null,
+    "type": "hostel",
+    "vibe": "lively"
+   }
+  ],
+  [
+   {
+    "area": "On Nut",
+    "badge": null,
+    "commute_cost": 2881,
+    "commute_min": 22,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 2881,
+      "monthly_hours": 15.8,
+      "one_way_min": 22,
+      "one_way_thb": 67
+     },
+     "car": {
+      "monthly_fare_thb": 6364,
+      "monthly_hours": 22.9,
+      "one_way_min": 32,
+      "one_way_thb": 148
+     }
+    },
+    "lat": 13.705,
+    "lon": 100.601,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "gym",
+     "supermarket"
+    ],
+    "mode": "bike",
+    "monthly_fare": 2881,
+    "monthly_hours": 15.8,
+    "name": "Priced Condo",
+    "offers": [],
+    "one_way_fare": 67,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 92,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.95,
+     "living": 0.74,
+     "location": 0.84
+    },
+    "time_cost": 1580,
+    "true_cost": 14881,
+    "true_cost_incl_time": 16461,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "",
+    "badge": null,
+    "commute_cost": 946,
+    "commute_min": 2,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 946,
+      "monthly_hours": 1.4,
+      "one_way_min": 2,
+      "one_way_thb": 22
+     },
+     "car": {
+      "monthly_fare_thb": 2150,
+      "monthly_hours": 2.1,
+      "one_way_min": 3,
+      "one_way_thb": 50
+     }
+    },
+    "lat": 13.745,
+    "lon": 100.535,
+    "matched_amenities": [],
+    "met_nearby": [],
+    "mode": "bike",
+    "monthly_fare": 946,
+    "monthly_hours": 1.4,
+    "name": "OSM Hotel",
+    "offers": [],
+    "one_way_fare": 22,
+    "price_known": false,
+    "rent": null,
+    "reviews": [],
+    "score": 45,
+    "source": "osm",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.5,
+     "living": 0.49,
+     "location": 0.12
+    },
+    "time_cost": 140,
+    "true_cost": null,
+    "true_cost_incl_time": null,
+    "type": "hotel",
+    "vibe": null
+   },
+   {
+    "area": "Ari",
+    "badge": null,
+    "commute_cost": 1849,
+    "commute_min": 12,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1849,
+      "monthly_hours": 8.6,
+      "one_way_min": 12,
+      "one_way_thb": 43
+     },
+     "car": {
+      "monthly_fare_thb": 4300,
+      "monthly_hours": 12.9,
+      "one_way_min": 18,
+      "one_way_thb": 100
+     }
+    },
+    "lat": 13.779,
+    "lon": 100.545,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [
+     "supermarket"
+    ],
+    "mode": "bike",
+    "monthly_fare": 1849,
+    "monthly_hours": 8.6,
+    "name": "Star Hostel",
+    "offers": [],
+    "one_way_fare": 43,
+    "price_known": true,
+    "rent": 6500,
+    "reviews": [],
+    "score": 89,
+    "source": "mock",
+    "sources": [],
+    "stars": 4.0,
+    "subscores": {
+     "cost": 1.0,
+     "living": 0.51,
+     "location": 0.47
+    },
+    "time_cost": 860,
+    "true_cost": 8349,
+    "true_cost_incl_time": 9209,
+    "type": "hostel",
+    "vibe": "lively"
+   }
+  ],
+  [
+   {
+    "area": "On Nut",
+    "badge": null,
+    "commute_cost": 7611,
+    "commute_min": 32,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 3311,
+      "monthly_hours": 15.8,
+      "one_way_min": 22,
+      "one_way_thb": 77
+     },
+     "car": {
+      "monthly_fare_thb": 7611,
+      "monthly_hours": 22.9,
+      "one_way_min": 32,
+      "one_way_thb": 177
+     }
+    },
+    "lat": 13.705,
+    "lon": 100.601,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 7611,
+    "monthly_hours": 22.9,
+    "name": "Priced Condo",
+    "offers": [],
+    "one_way_fare": 177,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 52,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.59,
+     "living": 0.42,
+     "location": 0.51
+    },
+    "time_cost": null,
+    "true_cost": 19611,
+    "true_cost_incl_time": null,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "",
+    "badge": null,
+    "commute_cost": 2580,
+    "commute_min": 3,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1075,
+      "monthly_hours": 1.4,
+      "one_way_min": 2,
+      "one_way_thb": 25
+     },
+     "car": {
+      "monthly_fare_thb": 2580,
+      "monthly_hours": 2.1,
+      "one_way_min": 3,
+      "one_way_thb": 60
+     }
+    },
+    "lat": 13.745,
+    "lon": 100.535,
+    "matched_amenities": [],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 2580,
+    "monthly_hours": 2.1,
+    "name": "OSM Hotel",
+    "offers": [],
+    "one_way_fare": 60,
+    "price_known": false,
+    "rent": null,
+    "reviews": [],
+    "score": 48,
+    "source": "osm",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.5,
+     "living": 0.47,
+     "location": 0.47
+    },
+    "time_cost": null,
+    "true_cost": null,
+    "true_cost_incl_time": null,
+    "type": "hotel",
+    "vibe": null
+   },
+   {
+    "area": "Ari",
+    "badge": null,
+    "commute_cost": 5160,
+    "commute_min": 18,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 2150,
+      "monthly_hours": 8.6,
+      "one_way_min": 12,
+      "one_way_thb": 50
+     },
+     "car": {
+      "monthly_fare_thb": 5160,
+      "monthly_hours": 12.9,
+      "one_way_min": 18,
+      "one_way_thb": 120
+     }
+    },
+    "lat": 13.779,
+    "lon": 100.545,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 5160,
+    "monthly_hours": 12.9,
+    "name": "Star Hostel",
+    "offers": [],
+    "one_way_fare": 120,
+    "price_known": true,
+    "rent": 6500,
+    "reviews": [],
+    "score": 67,
+    "source": "mock",
+    "sources": [],
+    "stars": 4.0,
+    "subscores": {
+     "cost": 1.0,
+     "living": 0.44,
+     "location": 0.47
+    },
+    "time_cost": null,
+    "true_cost": 11660,
+    "true_cost_incl_time": null,
+    "type": "hostel",
+    "vibe": "lively"
+   }
+  ]
+ ],
+ "sharpen": [
+  {
+   "cost": 0.792044491816199,
+   "living": 0.07138542607613337,
+   "location": 0.13657008210766758
+  },
+  {
+   "cost": 0.0,
+   "living": 0.0,
+   "location": 0.0
+  },
+  {
+   "cost": 0.33333333333333337,
+   "living": 0.33333333333333337,
+   "location": 0.33333333333333337
+  }
+ ]
+}

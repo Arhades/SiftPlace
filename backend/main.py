@@ -47,6 +47,7 @@ from fastapi.responses import HTMLResponse
 # file present (no-op).
 load_dotenv()
 
+import usage
 from flood import flood_risk
 from geocode import geocode as geocode_fn
 from models import (CityScoreRequest, ParseRequest, ScoreRequest, ScoreResponse)
@@ -190,14 +191,27 @@ def _merge_parsed(prefs: dict, parsed: dict) -> None:
             prefs["weights"][axis] = max(0, min(10, prefs["weights"][axis] + delta))
 
 
+def _client_ip(request: Request) -> str:
+    """Best-effort client IP: first X-Forwarded-For hop behind a proxy, else
+    the socket peer. Only ever stored hashed (see usage.hash_ip)."""
+    forwarded = request.headers.get("x-forwarded-for", "")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
 @app.post("/search", response_model=ScoreResponse)
 @rate_limit(SEARCH_LIMIT)
 def search(request: Request, req: CityScoreRequest):
     """Find and rank REAL listings for any city (OSM + configured partner feeds)."""
     require_human(request)
+<<<<<<< Updated upstream
     # usage accounting: the fetch modules flip this flag on any real network
     # call; log_search() below then knows cache-hit vs live
     reset_network_flag()
+=======
+    usage.begin_request()  # so log_search can tell cache hits from live-API searches
+>>>>>>> Stashed changes
 
     # everything downstream runs in THB; the user's budget may not
     budget_thb = to_thb(req.budget, req.currency)
@@ -230,7 +244,11 @@ def search(request: Request, req: CityScoreRequest):
     out = build_and_score(prefs, city=req.city,
                           radius_m=req.radius_m, max_listings=req.max_listings,
                           check_in=req.check_in, check_out=req.check_out)
+<<<<<<< Updated upstream
     log_search(request.client.host if request.client else "unknown")
+=======
+    usage.log_search(_client_ip(request))
+>>>>>>> Stashed changes
     return {"count": out.get("count", 0), "results": out.get("results", []),
             "note": out.get("error") or out.get("note"),
             "centre": out.get("centre"), "radius_used": out.get("radius_used"),
@@ -239,6 +257,7 @@ def search(request: Request, req: CityScoreRequest):
             "parsed": parsed, "providers": out.get("providers", [])}
 
 
+<<<<<<< Updated upstream
 # --- founder admin (server-side ADMIN_TOKEN gate) -------------------------------
 
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "").strip()
@@ -267,10 +286,31 @@ def admin_page():
         return ADMIN_HTML.read_text(encoding="utf-8")
     except FileNotFoundError:
         return HTMLResponse("admin.html missing", status_code=404)
+=======
+# --- founder-only usage dashboard ----------------------------------------------
+# The token lives ONLY in the ADMIN_TOKEN env var and is verified here on the
+# server. Never gate an admin view with a password embedded in frontend code —
+# anyone can read the page source, so it protects nothing.
+
+def require_admin(request: Request) -> None:
+    """403 unless the request carries the ADMIN_TOKEN. Admin is disabled
+    entirely (404) when the env var is not set."""
+    expected = os.environ.get("ADMIN_TOKEN", "").strip()
+    if not expected:
+        raise HTTPException(status_code=404)  # feature off — don't advertise it
+    supplied = request.headers.get("x-admin-token", "")
+    if not supplied:
+        auth = request.headers.get("authorization", "")
+        if auth.lower().startswith("bearer "):
+            supplied = auth[7:]
+    if not secrets.compare_digest(supplied.strip(), expected):
+        raise HTTPException(status_code=403, detail="bad_admin_token")
+>>>>>>> Stashed changes
 
 
 @app.get("/admin/stats")
 def admin_stats(request: Request):
+<<<<<<< Updated upstream
     """Usage + free-API budget numbers for the founder (see usage.py)."""
     require_admin(request)
     stats = get_stats()
@@ -287,3 +327,20 @@ def admin_retrain(request: Request):
     result = train_and_save(verbose=False)
     result["model_reloaded"] = reload_model() if result.get("trained") else False
     return result
+=======
+    """Founder numbers: searches, top (hashed) IPs, free-API budgets, cache rate."""
+    require_admin(request)
+    return usage.stats()
+
+
+ADMIN_PAGE = (pathlib.Path(__file__).parent / "admin.html")
+
+
+@app.get("/admin", response_class=HTMLResponse)
+def admin_page():
+    """Tiny self-contained stats page. The page itself is public and harmless —
+    every number on it comes from /admin/stats, which checks the token."""
+    if not os.environ.get("ADMIN_TOKEN", "").strip():
+        raise HTTPException(status_code=404)
+    return ADMIN_PAGE.read_text(encoding="utf-8")
+>>>>>>> Stashed changes

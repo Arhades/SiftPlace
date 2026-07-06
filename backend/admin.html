@@ -1,11 +1,15 @@
 <!doctype html>
+<<<<<<< Updated upstream
 <!-- SiftPlace founder dashboard. Static shell only: all data comes from
      /admin/stats, which verifies ADMIN_TOKEN on the BACKEND. The token is
      kept in sessionStorage (gone when the tab closes), never in this file. -->
+=======
+>>>>>>> Stashed changes
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<<<<<<< Updated upstream
 <meta name="robots" content="noindex">
 <title>SiftPlace — Founder stats</title>
 <style>
@@ -181,6 +185,101 @@ async function retrain() {
 }
 
 if (sessionStorage.getItem("sp_admin")) load();
+=======
+<title>SiftPlace — founder stats</title>
+<style>
+  :root { color-scheme: light dark; font-family: system-ui, sans-serif; }
+  body { margin: 0 auto; max-width: 720px; padding: 24px 16px; }
+  h1 { font-size: 1.2rem; }
+  .row { display: flex; gap: 8px; margin: 16px 0; }
+  input { flex: 1; padding: 8px 10px; font: inherit; }
+  button { padding: 8px 14px; font: inherit; cursor: pointer; }
+  .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+  .card { border: 1px solid #8884; border-radius: 10px; padding: 12px; }
+  .card b { display: block; font-size: 1.5rem; }
+  .card span { font-size: .8rem; opacity: .7; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: .9rem; }
+  th, td { text-align: left; padding: 6px 8px; border-bottom: 1px solid #8883; }
+  .bar { height: 6px; background: #8883; border-radius: 3px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: #4a8; }
+  .warn { color: #c40; font-weight: 600; }
+  .warn .bar i, tr.warn .bar i { background: #c40; }
+  #err { color: #c40; }
+  h2 { font-size: 1rem; margin-top: 28px; }
+</style>
+</head>
+<body>
+<h1>SiftPlace — founder stats</h1>
+<div class="row">
+  <input id="token" type="password" placeholder="ADMIN_TOKEN" autocomplete="off">
+  <button onclick="load()">Load</button>
+</div>
+<p id="err"></p>
+<div id="out" hidden>
+  <div class="cards">
+    <div class="card"><b id="s-today">–</b><span>searches today</span></div>
+    <div class="card"><b id="s-total">–</b><span>searches total</span></div>
+    <div class="card"><b id="s-cache">–</b><span>cache hit rate today</span></div>
+  </div>
+
+  <h2>Free-API budgets today</h2>
+  <table id="providers"><thead>
+    <tr><th>provider</th><th>calls</th><th>limit</th><th style="width:35%">used</th></tr>
+  </thead><tbody></tbody></table>
+
+  <h2>Top clients today (hashed IPs)</h2>
+  <table id="ips"><thead>
+    <tr><th>client</th><th>searches today</th><th>last hour</th><th></th></tr>
+  </thead><tbody></tbody></table>
+</div>
+<script>
+  const $ = (id) => document.getElementById(id);
+  $("token").value = sessionStorage.getItem("siftplace:admin") || "";
+
+  async function load() {
+    $("err").textContent = "";
+    const token = $("token").value.trim();
+    let r;
+    try {
+      r = await fetch("/admin/stats", { headers: { "x-admin-token": token } });
+    } catch {
+      $("err").textContent = "Backend unreachable.";
+      return;
+    }
+    if (r.status === 403) { $("err").textContent = "Wrong token."; return; }
+    if (!r.ok) { $("err").textContent = "Request failed (" + r.status + ")."; return; }
+    sessionStorage.setItem("siftplace:admin", token);
+    render(await r.json());
+  }
+
+  function render(d) {
+    if (d.error) { $("err").textContent = d.error; return; }
+    $("out").hidden = false;
+    $("s-today").textContent = d.searches_today;
+    $("s-total").textContent = d.searches_total;
+    $("s-cache").textContent =
+      d.cache_hit_rate_today == null ? "—" : Math.round(d.cache_hit_rate_today * 100) + "%";
+
+    $("providers").tBodies[0].innerHTML = d.api_calls.map((p) => {
+      const pct = p.used_pct == null ? 0 : Math.min(p.used_pct, 100);
+      return `<tr class="${p.near_limit ? "warn" : ""}">
+        <td>${p.provider}${p.near_limit ? " ⚠" : ""}</td>
+        <td>${p.calls_today}</td>
+        <td>${p.daily_limit ?? "—"}</td>
+        <td><div class="bar"><i style="width:${pct}%"></i></div></td></tr>`;
+    }).join("");
+
+    $("ips").tBodies[0].innerHTML = (d.top_ips.length ? d.top_ips : []).map((ip) => `
+      <tr class="${ip.flagged ? "warn" : ""}">
+        <td><code>${ip.ip_hash}</code></td>
+        <td>${ip.searches_today}</td>
+        <td>${ip.searches_last_hour}</td>
+        <td>${ip.flagged ? "possible spam (>" + d.spam_threshold_per_hour + "/h)" : ""}</td></tr>`
+    ).join("") || `<tr><td colspan="4">no searches yet today</td></tr>`;
+  }
+
+  if ($("token").value) load();
+>>>>>>> Stashed changes
 </script>
 </body>
 </html>

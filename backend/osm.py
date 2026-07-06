@@ -24,9 +24,34 @@ import threading
 
 import requests
 
+<<<<<<< Updated upstream
 from apicache import cache_get, cache_set
 from scoring import haversine_m
 from usage import count_api_call
+=======
+from cache_store import cache_get, cache_set
+from scoring import haversine_m
+from usage import count_api_call
+
+# How long Overpass results stay fresh. Shops/stations/hotels change on a
+# timescale of months, so a day-long cache costs nothing in accuracy and saves
+# the vast majority of live calls (precompute.py re-warms it daily).
+POI_TTL_S = 24 * 3600
+ACCOM_TTL_S = 24 * 3600
+
+# Cap how big a single Overpass query can get, and never run more than two at
+# once — the public mirrors are shared, and big/parallel bursts get IP-banned.
+# The cap sits just above search.py's widest legitimate query (9 km + 1 km POI
+# margin): it's a runaway-input guard, not a behaviour change.
+MAX_RADIUS_M = 10_000
+MAX_ACCOM_LIMIT = 60
+_overpass_slots = threading.BoundedSemaphore(2)
+
+
+def _bucket(lat: float, lon: float) -> str:
+    """~500 m grid key so adjacent searches in the same block share a cache entry."""
+    return f"{round(lat * 200) / 200},{round(lon * 200) / 200}"
+>>>>>>> Stashed changes
 
 # Public Overpass mirrors, tried in order. The canonical endpoint rejects some
 # networks / the default User-Agent with HTTP 406, and individual mirrors go up
@@ -89,6 +114,7 @@ _TYPE_MAP = {"hotel": "hotel", "hostel": "hostel",
              "guest_house": "hostel", "apartment": "condo"}
 
 
+<<<<<<< Updated upstream
 # --- cache key helpers -----------------------------------------------------------
 
 def _bucket(lat: float, lon: float) -> tuple[float, float]:
@@ -135,6 +161,28 @@ def _post(query: str, timeout: int = 35) -> list:
             except Exception:
                 continue  # mirror down/blocked -> try the next one
     return []
+=======
+def _post(query: str, timeout: int = 35):
+    """Run an Overpass query against the first mirror that answers.
+
+    Returns the elements list on success, or None when EVERY mirror failed —
+    callers treat None as "no data" but must not cache it (a dead mirror is
+    not the same as an area with no results).
+
+    Holds one of two concurrency slots for the duration of the call so a burst
+    of user searches can never stampede the public mirrors.
+    """
+    with _overpass_slots:
+        for url in OVERPASS_URLS:
+            try:
+                count_api_call("overpass")  # each HTTP attempt is a real call
+                resp = requests.post(url, data={"data": query}, headers=HEADERS, timeout=timeout)
+                resp.raise_for_status()
+                return resp.json().get("elements", [])
+            except Exception:
+                continue
+    return None
+>>>>>>> Stashed changes
 
 
 def _coords(element: dict):
@@ -161,15 +209,22 @@ def fetch_pois(lat: float, lon: float, kinds: list[str], radius_m: int = 2500) -
     """One area query per kind -> {kind: [(lat, lon, name), ...]} of real POIs.
 
     Query once per area, then compute each listing's nearest POI locally — far
+<<<<<<< Updated upstream
     cheaper than a query per listing. Results are cached per (bucket, kind,
     radius step); a cached superset (bigger circle) is fine because callers
     only ever take the nearest point.
+=======
+    cheaper than a query per listing. Each (area, kind, radius) result is kept
+    in the persistent cache for a day, so repeated or nearby searches are free.
+>>>>>>> Stashed changes
     """
+    radius_m = min(radius_m, MAX_RADIUS_M)
     out: dict[str, list] = {}
     for kind in kinds:
         filters = TAGS.get(kind)
         if not filters:
             continue
+<<<<<<< Updated upstream
 
         bucket_lat, bucket_lon = _bucket(lat, lon)
 
@@ -239,6 +294,61 @@ def fetch_accommodations(lat: float, lon: float, radius_m: int = 2500,
 
 def nearest_distances(lat: float, lon: float, kinds: list[str],
                       radius_m: int = 1500) -> dict:
+=======
+        cache_key = f"{_bucket(lat, lon)}|{kind}|{radius_m}"
+        cached = cache_get("overpass-poi", cache_key)
+        if cached is not None:
+            out[kind] = [tuple(p) for p in cached]
+            continue
+        body = "".join(f"{f}(around:{radius_m},{lat},{lon});" for f in filters)
+        elements = _post(f"[out:json][timeout:25];({body});out center;")
+        pts = []
+        for el in elements or []:
+            la, lo = _coords(el)
+            if la is None:
+                continue
+            pts.append((la, lo, (el.get("tags") or {}).get("name", "")))
+        out[kind] = pts
+        if elements is not None:  # don't cache a mirror outage as "no POIs"
+            cache_set("overpass-poi", cache_key, pts, POI_TTL_S)
+    return out
+
+
+def fetch_accommodations(lat: float, lon: float, radius_m: int = 2500, limit: int = 30) -> list[dict]:
+    """Return real lodging candidates near a point: name, coordinates, type.
+
+    Cached per (area, radius, limit) for a day — see POI cache note above.
+    """
+    radius_m = min(radius_m, MAX_RADIUS_M)
+    limit = min(limit, MAX_ACCOM_LIMIT)
+    cache_key = f"{_bucket(lat, lon)}|{radius_m}|{limit}"
+    cached = cache_get("overpass-accom", cache_key)
+    if cached is not None:
+        return cached
+
+    body = "".join(f"{f}(around:{radius_m},{lat},{lon});" for f in ACCOM_TAGS)
+    elements = _post(f"[out:json][timeout:30];({body});out center {limit * 2};")
+    out, seen = [], set()
+    for el in elements or []:
+        tags = el.get("tags") or {}
+        name = tags.get("name")
+        if not name or name in seen:
+            continue
+        la, lo = _coords(el)
+        if la is None:
+            continue
+        seen.add(name)
+        out.append({"name": name, "lat": la, "lon": lo,
+                    "type": _TYPE_MAP.get(tags.get("tourism"), "hotel")})
+        if len(out) >= limit:
+            break
+    if elements is not None:  # don't cache a mirror outage as "no lodging"
+        cache_set("overpass-accom", cache_key, out, ACCOM_TTL_S)
+    return out
+
+
+def nearest_distances(lat: float, lon: float, kinds: list[str], radius_m: int = 1500) -> dict:
+>>>>>>> Stashed changes
     """Convenience: {kind: metres_to_nearest} for a single point. Never raises."""
     pois = fetch_pois(lat, lon, kinds, radius_m)
     out = {}
