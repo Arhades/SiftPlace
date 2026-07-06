@@ -45,8 +45,10 @@ export interface ModeOption {
 }
 
 export const MODE_OPTIONS: ModeOption[] = [
-  { value: "car", label: "Grab / Bolt car", hint: "Comfier, pricier", icon: "🚗" },
+  { value: "car", label: "Private-hire car", hint: "Comfier, pricier", icon: "🚗" },
   { value: "bike", label: "Motorbike taxi", hint: "Cheaper, faster in traffic", icon: "🛵" },
+  { value: "transit", label: "Public transport", hint: "BTS / MRT / bus", icon: "🚆" },
+  { value: "walk", label: "Walk", hint: "Free — best kept close", icon: "🚶" },
 ];
 
 export interface MaxCommuteOption {

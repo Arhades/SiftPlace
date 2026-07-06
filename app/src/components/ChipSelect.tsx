@@ -15,7 +15,9 @@ type Props =
       onChange: (next: string) => void;
     };
 
-/** Reusable pill chip group — single-select (vibe) or multi-select (nearby/types/amenities). */
+/** Reusable pill chip group — single-select (vibe) or multi-select
+ * (nearby/types/amenities). Anything beyond the fixed options belongs in the
+ * "Anything else?" free-text note, which the NLP parser understands. */
 export function ChipSelect(props: Props) {
   const isSelected = (v: string) =>
     props.multiple === true ? props.value.includes(v) : props.value === v;

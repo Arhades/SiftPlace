@@ -7,9 +7,11 @@ import { CompareTable } from "./CompareTable";
 export function Saved({
   items,
   onToggleSave,
+  currency = "THB",
 }: {
   items: ListingResult[];
   onToggleSave: (listing: ListingResult) => void;
+  currency?: string;
 }) {
   const [comparing, setComparing] = useState(false);
   const canCompare = items.length >= 2;
@@ -55,7 +57,14 @@ export function Saved({
       ) : (
         <div className="space-y-4">
           {items.map((r, i) => (
-            <ResultCard key={r.name + i} r={r} isTop={false} saved onToggleSave={onToggleSave} />
+            <ResultCard
+              key={r.name + i}
+              r={r}
+              isTop={false}
+              saved
+              currency={currency}
+              onToggleSave={onToggleSave}
+            />
           ))}
         </div>
       )}

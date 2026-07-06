@@ -1,0 +1,186 @@
+<!doctype html>
+<!-- SiftPlace founder dashboard. Static shell only: all data comes from
+     /admin/stats, which verifies ADMIN_TOKEN on the BACKEND. The token is
+     kept in sessionStorage (gone when the tab closes), never in this file. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>SiftPlace — Founder stats</title>
+<style>
+  :root { --ink:#2c160e; --muted:#8a6f5f; --line:#e8d9c8; --bg:#faf4ea;
+          --card:#fffdf8; --ok:#2e7d32; --warn:#b26a00; --bad:#c62828; }
+  * { box-sizing:border-box; margin:0; }
+  body { font-family:system-ui,sans-serif; background:var(--bg); color:var(--ink);
+         padding:24px; max-width:880px; margin:0 auto; }
+  h1 { font-size:20px; margin-bottom:4px; }
+  .sub { color:var(--muted); font-size:12px; margin-bottom:20px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px;
+          padding:16px; margin-bottom:14px; }
+  .row { display:flex; flex-wrap:wrap; gap:14px; }
+  .row .card { flex:1; min-width:150px; }
+  .big { font-size:26px; font-weight:700; }
+  .label { font-size:11px; color:var(--muted); text-transform:uppercase;
+           letter-spacing:.05em; font-weight:700; margin-bottom:6px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-size:11px; text-transform:uppercase; }
+  .flag { color:var(--bad); font-weight:700; }
+  .bar { height:8px; background:var(--line); border-radius:4px; overflow:hidden; }
+  .bar > div { height:100%; background:var(--ok); }
+  .bar.hot > div { background:var(--bad); }
+  .bar.warm > div { background:var(--warn); }
+  input, button { font:inherit; padding:9px 12px; border-radius:10px;
+                  border:1px solid var(--line); }
+  button { background:var(--ink); color:#fff; cursor:pointer; border:0; }
+  #login { display:flex; gap:8px; }
+  #login input { flex:1; }
+  .err { color:var(--bad); font-size:13px; margin-top:8px; }
+  .mono { font-family:ui-monospace,monospace; }
+  .muted { color:var(--muted); }
+</style>
+</head>
+<body>
+<h1>SiftPlace — Founder stats</h1>
+<p class="sub">Search volume, spam watch, and free-API budgets. Token is verified
+server-side; nothing here works without it.</p>
+
+<div class="card" id="loginCard">
+  <div class="label">Admin token</div>
+  <div id="login">
+    <input id="token" type="password" placeholder="ADMIN_TOKEN from backend/.env">
+    <button onclick="load()">View stats</button>
+  </div>
+  <div class="err" id="err"></div>
+</div>
+
+<div id="stats" style="display:none">
+  <div class="row">
+    <div class="card"><div class="label">Searches today</div><div class="big" id="sToday"></div></div>
+    <div class="card"><div class="label">Searches total</div><div class="big" id="sTotal"></div></div>
+    <div class="card"><div class="label">Cache hit rate today</div><div class="big" id="hitRate"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="label">Free-API budgets today</div>
+    <table id="apiTable"><thead><tr>
+      <th>Provider</th><th>Calls</th><th>Daily limit</th><th style="width:40%">Used</th>
+    </tr></thead><tbody></tbody></table>
+  </div>
+
+  <div class="card">
+    <div class="label">Top sources today (hashed IPs)</div>
+    <table id="ipTable"><thead><tr>
+      <th>Source</th><th>Searches</th><th>Last hour</th><th>Last seen</th>
+    </tr></thead><tbody></tbody></table>
+    <p class="muted" style="font-size:11px;margin-top:8px" id="spamNote"></p>
+  </div>
+
+  <div class="card">
+    <div class="label">NLP model</div>
+    <div id="nlpInfo" style="font-size:13px"></div>
+    <div style="margin-top:10px">
+      <button onclick="retrain()">Retrain now</button>
+      <span class="muted" style="font-size:12px" id="retrainMsg"></span>
+    </div>
+  </div>
+
+  <p class="muted" style="font-size:11px">Auto-refreshes every 30&thinsp;s.
+  Counters reset daily; only REAL network calls count (cache hits don't).</p>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let timer = null;
+
+function tokenHeader() {
+  return { "Authorization": "Bearer " + (sessionStorage.getItem("sp_admin") || "") };
+}
+
+async function load() {
+  const typed = $("token").value.trim();
+  if (typed) sessionStorage.setItem("sp_admin", typed);
+  $("err").textContent = "";
+  let res;
+  try {
+    res = await fetch("/admin/stats", { headers: tokenHeader() });
+  } catch {
+    $("err").textContent = "Backend unreachable.";
+    return;
+  }
+  if (!res.ok) {
+    $("err").textContent = res.status === 403
+      ? "Rejected — wrong token, or ADMIN_TOKEN is not set on the backend."
+      : "Request failed (" + res.status + ").";
+    sessionStorage.removeItem("sp_admin");
+    return;
+  }
+  render(await res.json());
+  $("loginCard").style.display = "none";
+  $("stats").style.display = "";
+  clearInterval(timer);
+  timer = setInterval(load, 30000);
+}
+
+function render(s) {
+  $("sToday").textContent = s.searches_today ?? "—";
+  $("sTotal").textContent = s.searches_total ?? "—";
+  $("hitRate").textContent = s.cache_hit_rate_today == null
+    ? "—" : Math.round(s.cache_hit_rate_today * 100) + "%";
+
+  const api = $("apiTable").querySelector("tbody");
+  api.innerHTML = "";
+  for (const p of s.api_calls_today || []) {
+    const pct = p.used_pct ?? 0;
+    const cls = pct >= 90 ? "hot" : pct >= 70 ? "warm" : "";
+    const warn = pct >= 70 ? ` <span class="flag">⚠ ${pct}%</span>` : "";
+    api.insertAdjacentHTML("beforeend", `<tr>
+      <td class="mono">${p.provider}</td>
+      <td>${p.calls_today}</td>
+      <td>${p.daily_limit ?? "?"}</td>
+      <td><div class="bar ${cls}"><div style="width:${Math.min(pct, 100)}%"></div></div>${warn}</td>
+    </tr>`);
+  }
+
+  const ips = $("ipTable").querySelector("tbody");
+  ips.innerHTML = "";
+  for (const ip of s.top_ips_today || []) {
+    ips.insertAdjacentHTML("beforeend", `<tr>
+      <td class="mono">${ip.ip_hash}${ip.flagged ? ' <span class="flag">⚠ spam?</span>' : ""}</td>
+      <td>${ip.searches}</td>
+      <td>${ip.searches_last_hour}</td>
+      <td class="muted">${ip.last_seen}</td>
+    </tr>`);
+  }
+  $("spamNote").textContent =
+    `Flagged when a source exceeds ${s.spam_threshold_per_hour} searches/hour. ` +
+    `IPs are salted hashes — raw addresses are never stored.`;
+
+  const m = s.nlp_model || {};
+  $("nlpInfo").innerHTML = m.loaded
+    ? `<b>${m.name}</b> · trained ${m.trained_at} on ${m.n_samples} notes ` +
+      `<span class="muted">(held-out micro-F1: ` +
+      `${Object.entries(m.metrics || {}).map(([k, v]) => `${k} ${v.f1_micro}`).join(", ")})</span>`
+    : `<span class="muted">no trained model — keyword rules only. ` +
+      `Collect notes, then retrain.</span>`;
+}
+
+async function retrain() {
+  $("retrainMsg").textContent = "training…";
+  try {
+    const res = await fetch("/admin/retrain", { method: "POST", headers: tokenHeader() });
+    const out = await res.json();
+    $("retrainMsg").textContent = out.trained
+      ? `done — ${out.winner} on ${out.n_samples} notes`
+      : `not trained: ${out.reason || out.detail || res.status}`;
+    load();
+  } catch {
+    $("retrainMsg").textContent = "failed — backend unreachable";
+  }
+}
+
+if (sessionStorage.getItem("sp_admin")) load();
+</script>
+</body>
+</html>

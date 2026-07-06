@@ -10,6 +10,11 @@ env/
 .env.local
 *.key
 
+# Runtime artifacts (regenerated locally; the committed nlp_training.csv seed
+# stays in git — user-collected notes appended to it are local growth)
+backend/data/
+backend/nlp_model.joblib
+
 # Node / build (if you add tooling later)
 node_modules/
 dist/
