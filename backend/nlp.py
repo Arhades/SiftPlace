@@ -1,10 +1,9 @@
 """Free-text intake parsing: "Anything else?" → structured search demands.
 
-Two engines, layered:
+Two engines:
   1. `parse_rules` — dependency-free keyword/synonym parser driven by the
      **`nlp_terms.csv`** "bag of words" next to this file. Always available; the
      guaranteed fallback. Edit the vocabulary in the CSV — no code changes needed.
-<<<<<<< Updated upstream
   2. `parse_model` — a TRAINED text classifier (Porter-stemmed bag of words →
      multi-label Naive Bayes / MLP, see `nlp_train.py`). Loaded from
      `nlp_model.joblib` at startup when it exists; never retrained per request.
@@ -23,20 +22,6 @@ How the model keeps improving ("retrain as users add sentences"):
   can add matches the keywords missed, and can never lose the guaranteed ones.
 
 Both engines return the same shape so the caller/frontend doesn't care which ran:
-=======
-  2. `parse_model` — trained text classifier (Porter-stemmed bag of words →
-     per-label Naive Bayes / MLP, see `nlp_train.py`). Loaded from
-     `data/nlp_model.joblib` when it exists; it generalises to synonyms the CSV
-     doesn't list yet. Never required — on ANY problem the rules result stands.
-
-`parse_notes` runs the rules first (they also handle weight nudges and
-must-haves, which the classifier doesn't predict), then lets the model add any
-demand keys it is confident about. Every submitted note is appended to
-`data/nlp_training.csv`, so the model keeps learning as real usage accumulates
-(retrain with `python nlp_train.py` or POST /admin/retrain).
-
-The returned shape is identical whichever engine ran:
->>>>>>> Stashed changes
 {
   amenities:   [wifi|desk|kitchen|laundry|gympool, ...]
   nearby:      [gym|supermarket|transit|mall|flea_market, ...]
@@ -45,11 +30,7 @@ The returned shape is identical whichever engine ran:
   weight_nudges: {cost: int, location: int, living: int}   # -2..+2 soft nudges
   must_haves:  ["pet friendly", ...]   # demands we can't map to a known key
   detected:    ["🛒 supermarket nearby", ...]  # human-readable, shown to user
-<<<<<<< Updated upstream
   engine:      "rules" | "model+rules"
-=======
-  engine:      "rules" | "model"
->>>>>>> Stashed changes
 }
 
 CSV columns (nlp_terms.csv):
@@ -62,11 +43,6 @@ CSV columns (nlp_terms.csv):
 from __future__ import annotations
 
 import csv
-<<<<<<< Updated upstream
-=======
-import datetime as _dt
-import json
->>>>>>> Stashed changes
 import pathlib
 import re
 import threading
@@ -76,7 +52,6 @@ NEARBY_KEYS = ["gym", "supermarket", "transit", "mall", "flea_market"]
 TYPE_KEYS = ["condo", "hostel", "hotel"]
 
 _TERMS_CSV = pathlib.Path(__file__).parent / "nlp_terms.csv"
-<<<<<<< Updated upstream
 TRAINING_CSV = pathlib.Path(__file__).parent / "nlp_training.csv"
 MODEL_PATH = pathlib.Path(__file__).parent / "nlp_model.joblib"
 
@@ -84,25 +59,13 @@ MODEL_PATH = pathlib.Path(__file__).parent / "nlp_model.joblib"
 MODEL_CONFIDENCE = 0.5
 # stop appending training rows beyond this many (plenty before a rethink)
 TRAINING_ROW_CAP = 50_000
-=======
-MODEL_PATH = pathlib.Path(__file__).parent / "data" / "nlp_model.joblib"
-TRAINING_CSV = pathlib.Path(__file__).parent / "data" / "nlp_training.csv"
-
-# A label only counts when the classifier is at least this sure. Below the
-# threshold we silently keep the rules-only result (the safe default).
-MODEL_CONFIDENCE = 0.5
->>>>>>> Stashed changes
 
 
 def _load_terms(path: pathlib.Path = _TERMS_CSV):
     """Load the keyword bag of words from CSV.
 
     Degrades gracefully to empty lists if the file is missing or a row is
-<<<<<<< Updated upstream
     malformed (the model engine still works). Rules matched on lowercased text.
-=======
-    malformed. Rules are matched on lowercased text.
->>>>>>> Stashed changes
     """
     synonyms: list[tuple[str, str, str]] = []
     vibes: list[tuple[str, str]] = []
@@ -185,7 +148,6 @@ def parse_rules(text: str) -> dict:
     return out
 
 
-<<<<<<< Updated upstream
 # ---- shared text preprocessing (the trainer imports these) --------------------
 #
 # Mirrors the standard sklearn NLP pipeline: strip non-letters, lowercase,
@@ -330,136 +292,8 @@ def parse_model(text: str) -> dict | None:
             elif prefix == "vibe" and key in ("quiet", "lively"):
                 out["vibe"] = out["vibe"] or key
         return out
-=======
-# ---- shared text preprocessing (used at train AND predict time) ---------------
-# The classic sklearn NLP recipe: letters only → lowercase → drop English
-# stopwords (but KEEP "not" — negation matters) → Porter stem → re-join.
-
-_stem_tools: tuple | None | bool = None  # lazy: (stemmer, stopword_set) | False
-
-
-def _stemming_tools():
-    global _stem_tools
-    if _stem_tools is None:
-        try:
-            import nltk
-            from nltk.stem.porter import PorterStemmer
-            try:
-                from nltk.corpus import stopwords
-                words = stopwords.words("english")
-            except LookupError:
-                nltk.download("stopwords", quiet=True)
-                from nltk.corpus import stopwords
-                words = stopwords.words("english")
-            stop = set(words)
-            stop.discard("not")
-            _stem_tools = (PorterStemmer(), stop)
-        except Exception:
-            _stem_tools = False  # nltk unavailable — model engine stays off
-    return _stem_tools or None
-
-
-def preprocess(text: str) -> str | None:
-    """Stemmed, stopword-free version of `text`, or None when NLTK is missing."""
-    tools = _stemming_tools()
-    if tools is None:
-        return None
-    stemmer, stop = tools
-    tokens = re.sub("[^a-zA-Z]", " ", text or "").lower().split()
-    return " ".join(stemmer.stem(word) for word in tokens if word not in stop)
-
-
-# ---- trained-model engine ------------------------------------------------------
-# The artifact is written by nlp_train.py: {vectorizer, classifier, labels, ...}
-# where labels look like "amenities:wifi" / "nearby:gym" / "vibe:quiet".
-
-_model_lock = threading.Lock()
-_model_cache: dict = {"mtime": None, "bundle": None}
-
-
-def _load_model() -> dict | None:
-    """Load (and cache) the trained model; reload when the file changes so a
-    retrain takes effect without a server restart. None when absent/broken."""
-    try:
-        mtime = MODEL_PATH.stat().st_mtime
-    except OSError:
-        return None
-    with _model_lock:
-        if _model_cache["mtime"] != mtime:
-            try:
-                import joblib
-                _model_cache["bundle"] = joblib.load(MODEL_PATH)
-                _model_cache["mtime"] = mtime
-            except Exception:
-                return None
-        return _model_cache["bundle"]
-
-
-def parse_model(text: str) -> dict | None:
-    """Classifier extraction; None whenever the model can't run (no artifact,
-    missing deps, prediction error) so the caller keeps the rules result."""
-    bundle = _load_model()
-    if bundle is None or not (text or "").strip():
-        return None
-    stemmed = preprocess(text)
-    if not stemmed:
-        return None
-    try:
-        features = bundle["vectorizer"].transform([stemmed])
-        probabilities = bundle["classifier"].predict_proba(features)[0]
-        confident = [label for label, p in zip(bundle["labels"], probabilities)
-                     if p >= MODEL_CONFIDENCE]
->>>>>>> Stashed changes
     except Exception:
         return None
-
-    out = _empty("model")
-    for label in confident:
-        bucket, _, key = label.partition(":")
-        if bucket in ("amenities", "nearby", "types") and key not in out[bucket]:
-            out[bucket].append(key)
-            out["detected"].append(_LABELS.get(bucket, {}).get(key, key))
-        elif bucket == "vibe" and out["vibe"] is None:
-            out["vibe"] = key
-            out["detected"].append(f"{key} street vibe")
-    return out
-
-
-# ---- keep-learning log ----------------------------------------------------------
-# Every parsed note lands here (text + the labels we assigned + which engine).
-# nlp_train.py re-fits on this file, so the model improves with real usage.
-# Rows are marked source=auto; hand-corrected rows (source=human) keep their
-# labels verbatim at training time.
-
-_training_lock = threading.Lock()
-
-
-def _labels_of(parsed: dict) -> list[str]:
-    labels = [f"{bucket}:{key}"
-              for bucket in ("amenities", "nearby", "types")
-              for key in parsed[bucket]]
-    if parsed["vibe"]:
-        labels.append(f"vibe:{parsed['vibe']}")
-    return labels
-
-
-def _append_training_example(text: str, parsed: dict) -> None:
-    """Append one (note, labels) row to the training CSV. Never raises."""
-    try:
-        text = (text or "").strip()[:2000]
-        if not text:
-            return
-        TRAINING_CSV.parent.mkdir(parents=True, exist_ok=True)
-        with _training_lock:
-            is_new = not TRAINING_CSV.exists()
-            with open(TRAINING_CSV, "a", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                if is_new:
-                    writer.writerow(["ts", "text", "labels", "source"])
-                writer.writerow([_dt.datetime.now().isoformat(timespec="seconds"),
-                                 text, json.dumps(_labels_of(parsed)), "auto"])
-    except Exception:
-        pass  # logging must never break a user's search
 
 
 # ---- training-data accumulation (weak supervision) ------------------------------
@@ -493,7 +327,6 @@ def record_training_example(text: str, rules_parsed: dict) -> None:
 # ---- public entry point ----------------------------------------------------------
 
 def parse_notes(text: str) -> dict:
-<<<<<<< Updated upstream
     """Best available engine, never raises.
 
     Model predictions are UNIONED with the rules parser: the model adds
@@ -519,22 +352,3 @@ def parse_notes(text: str) -> dict:
         merged["vibe"] = model["vibe"]
         merged["detected"].append(f"{model['vibe']} street vibe")
     return merged
-=======
-    """Rules first (they also carry nudges + must-haves), then the trained
-    model adds any demand keys it is confident about. Never raises."""
-    out = parse_rules(text)
-    model_out = parse_model(text)
-    if model_out is not None:
-        for bucket in ("amenities", "nearby", "types"):
-            for key in model_out[bucket]:
-                if key not in out[bucket]:
-                    out[bucket].append(key)
-                    out["detected"].append(_LABELS.get(bucket, {}).get(key, key))
-        if out["vibe"] is None and model_out["vibe"]:
-            out["vibe"] = model_out["vibe"]
-            out["detected"].append(f"{model_out['vibe']} street vibe")
-        out["engine"] = "model"
-    if (text or "").strip():
-        _append_training_example(text, out)
-    return out
->>>>>>> Stashed changes

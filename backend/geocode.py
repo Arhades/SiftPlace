@@ -22,36 +22,21 @@ from functools import lru_cache
 
 import requests
 
-<<<<<<< Updated upstream
 from apicache import cache_get, cache_set
-=======
-from cache_store import cache_get, cache_set
->>>>>>> Stashed changes
 from usage import count_api_call
 
 NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 PHOTON_URL = "https://photon.komoot.io/api/"
 HEADERS = {"User-Agent": "SiftPlace/0.2 (student project; contact: you@example.com)"}
 
-<<<<<<< Updated upstream
 MIN_SECONDS_BETWEEN_CALLS = 1.0   # Nominatim's absolute-max policy; Photon gets
                                   # the same courtesy
 CACHE_TTL_S = 30 * 24 * 3600      # geocoding a place name is stable for weeks
 
-=======
-# Place names -> coordinates basically never change; keep hits for a month so
-# popular queries ("Bangkok", each university) almost never reach the network.
-GEOCODE_TTL_S = 30 * 24 * 3600
-
-# Nominatim's usage policy is an absolute max of 1 request/second. Enforce it
-# client-side (per provider) so we can't be the reason we get banned.
-_MIN_INTERVAL_S = 1.0
->>>>>>> Stashed changes
 _throttle_lock = threading.Lock()
 _last_call_at: dict[str, float] = {}
 
 
-<<<<<<< Updated upstream
 def _throttle(service: str) -> None:
     """Block until at least MIN_SECONDS_BETWEEN_CALLS since our last call to
     this service. Self-rate-limiting is what keeps us from being IP-banned."""
@@ -61,26 +46,12 @@ def _throttle(service: str) -> None:
         if wait > 0:
             time.sleep(wait)
         _last_call_at[service] = time.time()
-=======
-def _throttle(provider: str) -> None:
-    """Block until at least _MIN_INTERVAL_S has passed since our last call to
-    this provider."""
-    with _throttle_lock:
-        wait = _last_call_at.get(provider, 0.0) + _MIN_INTERVAL_S - time.monotonic()
-        if wait > 0:
-            time.sleep(wait)
-        _last_call_at[provider] = time.monotonic()
->>>>>>> Stashed changes
 
 
 def _from_nominatim(query: str):
     _throttle("nominatim")
     count_api_call("nominatim")
-<<<<<<< Updated upstream
     resp = requests.get(
-=======
-    r = requests.get(
->>>>>>> Stashed changes
         NOMINATIM_URL,
         params={"q": query, "format": "json", "limit": 1},
         headers=HEADERS,
@@ -97,8 +68,6 @@ def _from_nominatim(query: str):
 
 def _from_photon(query: str, osm_tag: str | None = None):
     """Photon returns GeoJSON; coordinates are [lon, lat]."""
-    _throttle("photon")
-    count_api_call("photon")
     params: dict = {"q": query, "limit": 1}
     if osm_tag:
         params["osm_tag"] = osm_tag
@@ -130,7 +99,6 @@ def geocode(query: str, prefer_city: bool = False):
     """
     if not query or not query.strip():
         return None
-<<<<<<< Updated upstream
 
     # 0) persistent cache — survives restarts, so common queries ("Bangkok",
     #    each university name) stop costing network calls entirely
@@ -144,24 +112,9 @@ def geocode(query: str, prefer_city: bool = False):
     # 1) Nominatim — best ranking, but blocked (HTTP 403) on some networks/IPs.
     try:
         result = _from_nominatim(query)
-=======
-    # 0) persistent cache — survives restarts, so popular queries ("Bangkok",
-    #    each campus) hit the network roughly once a month per process fleet.
-    cache_key = f"{prefer_city}|{query.strip().lower()}"
-    cached = cache_get("geocode", cache_key)
-    if cached is not None:
-        return cached
-    # 1) Nominatim — best ranking, but blocked (HTTP 403) on some networks/IPs.
-    try:
-        result = _from_nominatim(query)
-        if result:
-            cache_set("geocode", cache_key, result, GEOCODE_TTL_S)
-            return result
->>>>>>> Stashed changes
     except Exception:
         result = None
     # 2) Photon fallback.
-<<<<<<< Updated upstream
     if result is None:
         photon_tags = ["place:city", None] if prefer_city else [None]
         for tag in photon_tags:
@@ -174,15 +127,3 @@ def geocode(query: str, prefer_city: bool = False):
 
     cache_set(cache_key, result or {}, CACHE_TTL_S)
     return result
-=======
-    photon_tags = ["place:city", None] if prefer_city else [None]
-    for tag in photon_tags:
-        try:
-            result = _from_photon(query, tag)
-            if result:
-                cache_set("geocode", cache_key, result, GEOCODE_TTL_S)
-                return result
-        except Exception:
-            continue
-    return None
->>>>>>> Stashed changes

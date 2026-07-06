@@ -155,7 +155,6 @@ export interface FloodRisk {
   risk: FloodRiskLevel;
   reasons: string[];
   season: "peak" | "monsoon" | "dry";
-<<<<<<< Updated upstream
   /** Which calendar month (1-12) the seasonal estimate is for. */
   month?: number;
   /** Share (%) of the month's days expected to see heavy rain (climatology);
@@ -163,10 +162,6 @@ export interface FloodRisk {
   heavy_rain_pct: number | null;
   elevation_m: number | null;
   /** Legacy fields from the old 7-day-forecast model; daily is now empty. */
-=======
-  /** % of this month's days expected to see heavy rain (seasonal outlook); null when unavailable. */
-  heavy_rain_pct: number | null;
->>>>>>> Stashed changes
   week_rain_mm: number;
   max_day_mm: number;
   daily: FloodDay[];

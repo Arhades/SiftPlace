@@ -150,22 +150,17 @@ function App() {
       return next;
     });
 
-  // Re-applying identical filters must not re-hit the backend (the free APIs
-  // behind it are rate-limited): remember what the last SUCCESSFUL search was
-  // for and reuse the on-screen results when nothing changed.
-  const lastGoodIntake = useRef<string | null>(null);
-
   const runSearch = async (
     req: SearchRequest,
     handle?: { seq: number; signal: AbortSignal },
     ctxPatch?: Partial<ResultsContext>,
-  ): Promise<boolean> => {
+  ) => {
     const { seq, signal } = handle ?? beginSearch();
     setLastReq(req);
     setRadius(req.radius_m);
     try {
       const res = await search(req, signal);
-      if (isStale(seq)) return false;
+      if (isStale(seq)) return;
       setResults(res.results);
       setNote(res.note);
       setCtx((p) => ({
@@ -188,26 +183,14 @@ function App() {
           })
           .catch(() => {});
       }
-      return true;
     } catch (e) {
-      if (isStale(seq) || (e instanceof DOMException && e.name === "AbortError")) return false;
+      if (isStale(seq) || (e instanceof DOMException && e.name === "AbortError")) return;
       setErrorMsg(e instanceof Error ? e.message : "Unexpected error.");
       setStatus("error");
-      return false;
     }
   };
 
-<<<<<<< Updated upstream
   const handleSearch = async (values: IntakeValues, force = false) => {
-=======
-  const handleSearch = async (values: IntakeValues) => {
-    // identical filters + results already on screen -> nothing to fetch
-    const intakeKey = JSON.stringify(values);
-    if (intakeKey === lastGoodIntake.current && (status === "ok" || status === "empty")) {
-      setIntake(values);
-      return;
-    }
->>>>>>> Stashed changes
     setIntake(values);
 
     // identical intake + a usable result on screen -> reuse it, don't refetch
@@ -249,11 +232,10 @@ function App() {
         : null,
     );
 
-    const ok = await runSearch(buildReq(values, anchor, RADIUS_DEFAULT), handle, {
+    await runSearch(buildReq(values, anchor, RADIUS_DEFAULT), handle, {
       city: values.city,
       dest,
     });
-    lastGoodIntake.current = ok ? intakeKey : null;
   };
 
   // Browse-first: load default (Bangkok) listings on mount. Guard against the
@@ -276,13 +258,11 @@ function App() {
   const changeMode = (m: CommuteMode) => {
     if (!lastReq || m === lastReq.commute_mode) return;
     setIntake((p) => ({ ...p, mode: m }));
-    lastGoodIntake.current = null; // results no longer match the plain intake
     void runSearch({ ...lastReq, commute_mode: m });
   };
 
   const widerRadius = () => {
     if (!lastReq) return;
-    lastGoodIntake.current = null; // results no longer match the plain intake
     void runSearch({ ...lastReq, radius_m: Math.min(lastReq.radius_m + RADIUS_STEP, RADIUS_MAX) });
   };
 

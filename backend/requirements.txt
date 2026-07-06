@@ -4,12 +4,8 @@ pydantic>=2.6
 requests>=2.31
 slowapi>=0.1.9
 python-dotenv>=1.0
-<<<<<<< Updated upstream
 # trainable NLP (nlp.py / nlp_train.py). After install, fetch the stopword
 # list once:  python -c "import nltk; nltk.download('stopwords')"
-=======
-# trainable NLP parser (nlp.py / nlp_train.py)
->>>>>>> Stashed changes
 scikit-learn>=1.4
 nltk>=3.8
 joblib>=1.3
