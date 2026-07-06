@@ -4,7 +4,7 @@
 
 const API = (import.meta.env.VITE_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 
-export type CommuteMode = "car" | "bike";
+export type CommuteMode = "car" | "bike" | "transit" | "walk";
 export type Provider = "grab" | "bolt";
 
 export interface Weights {
@@ -111,7 +111,9 @@ export interface ParsedNotes {
   weight_nudges: Weights;
   must_haves: string[];
   detected: string[];
-  engine: "rules" | "llm";
+  /** "rules" = keyword parser only; "model+rules" = trained classifier merged
+   *  with the keyword parser (see backend nlp.py). */
+  engine: "rules" | "model+rules";
 }
 
 export interface SearchResponse {
@@ -153,9 +155,15 @@ export interface FloodRisk {
   risk: FloodRiskLevel;
   reasons: string[];
   season: "peak" | "monsoon" | "dry";
+  /** Which calendar month (1-12) the seasonal estimate is for. */
+  month?: number;
+  /** Share (%) of the month's days expected to see heavy rain (climatology);
+   *  null when the seasonal data was unavailable (season-only estimate). */
+  heavy_rain_pct: number | null;
+  elevation_m: number | null;
+  /** Legacy fields from the old 7-day-forecast model; daily is now empty. */
   week_rain_mm: number;
   max_day_mm: number;
-  elevation_m: number | null;
   daily: FloodDay[];
   source: string;
 }

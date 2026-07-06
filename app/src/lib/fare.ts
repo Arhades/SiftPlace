@@ -15,17 +15,28 @@ export function fmtHours(h: number | null | undefined): string {
 }
 
 export const MODE_LABEL: Record<CommuteMode, string> = {
-  car: "Grab/Bolt car",
+  car: "private-hire car",
   bike: "motorbike taxi",
+  transit: "public transport",
+  walk: "walking",
 };
 
 export const MODE_SHORT: Record<CommuteMode, string> = {
   car: "Car",
   bike: "Bike",
+  transit: "Transit",
+  walk: "Walk",
 };
 
+/** The natural alternative to show in the "vs …" comparison line. */
 export function otherMode(mode: CommuteMode): CommuteMode {
-  return mode === "car" ? "bike" : "car";
+  const alternative: Record<CommuteMode, CommuteMode> = {
+    car: "bike",
+    bike: "car",
+    transit: "bike",
+    walk: "transit",
+  };
+  return alternative[mode];
 }
 
 /** Monthly-fare bands (THB) for the commute-cost badge. */

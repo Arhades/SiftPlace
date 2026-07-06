@@ -1,0 +1,1168 @@
+{
+ "clamp": [
+  0.0,
+  0.4,
+  1.0,
+  3
+ ],
+ "distance_score": [
+  1.0,
+  1.0,
+  0.6470588235294117,
+  0.0,
+  0.0
+ ],
+ "fare_both": {
+  "bike": {
+   "monthly_fare_thb": 2365,
+   "monthly_hours": 12.2,
+   "one_way_min": 17,
+   "one_way_thb": 55
+  },
+  "car": {
+   "monthly_fare_thb": 5246,
+   "monthly_hours": 17.2,
+   "one_way_min": 24,
+   "one_way_thb": 122
+  },
+  "transit": {
+   "monthly_fare_thb": 1118,
+   "monthly_hours": 14.3,
+   "one_way_min": 20,
+   "one_way_thb": 26
+  },
+  "walk": {
+   "monthly_fare_thb": 0,
+   "monthly_hours": 58.0,
+   "one_way_min": 81,
+   "one_way_thb": 0
+  }
+ },
+ "fare_monthly": [
+  {
+   "monthly_fare_thb": 0,
+   "monthly_hours": 0.0,
+   "one_way_min": 30,
+   "one_way_thb": 170
+  },
+  {
+   "monthly_fare_thb": 4386,
+   "monthly_hours": 12.9,
+   "one_way_min": 30,
+   "one_way_thb": 170
+  },
+  {
+   "monthly_fare_thb": 7310,
+   "monthly_hours": 21.5,
+   "one_way_min": 30,
+   "one_way_thb": 170
+  },
+  {
+   "monthly_fare_thb": 10234,
+   "monthly_hours": 30.1,
+   "one_way_min": 30,
+   "one_way_thb": 170
+  }
+ ],
+ "fare_one_way": [
+  [
+   60,
+   2
+  ],
+  [
+   50,
+   2
+  ],
+  [
+   25,
+   1
+  ],
+  [
+   22,
+   1
+  ],
+  [
+   16,
+   2
+  ],
+  [
+   16,
+   2
+  ],
+  [
+   0,
+   6
+  ],
+  [
+   0,
+   6
+  ],
+  [
+   92,
+   11
+  ],
+  [
+   77,
+   11
+  ],
+  [
+   37,
+   8
+  ],
+  [
+   32,
+   8
+  ],
+  [
+   18,
+   9
+  ],
+  [
+   18,
+   9
+  ],
+  [
+   0,
+   38
+  ],
+  [
+   0,
+   38
+  ],
+  [
+   170,
+   30
+  ],
+  [
+   142,
+   30
+  ],
+  [
+   73,
+   21
+  ],
+  [
+   64,
+   21
+  ],
+  [
+   30,
+   24
+  ],
+  [
+   30,
+   24
+  ],
+  [
+   0,
+   100
+  ],
+  [
+   0,
+   100
+  ],
+  [
+   279,
+   56
+  ],
+  [
+   233,
+   56
+  ],
+  [
+   125,
+   39
+  ],
+  [
+   110,
+   39
+  ],
+  [
+   48,
+   45
+  ],
+  [
+   48,
+   45
+  ],
+  [
+   0,
+   188
+  ],
+  [
+   0,
+   188
+  ]
+ ],
+ "haversine": [
+  4726.758497210393,
+  111194.92664455874,
+  0.0
+ ],
+ "rank": [
+  [
+   {
+    "area": "Sathorn",
+    "badge": null,
+    "commute_cost": 5117,
+    "commute_min": 18,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 2150,
+      "monthly_hours": 8.6,
+      "one_way_min": 12,
+      "one_way_thb": 50
+     },
+     "car": {
+      "monthly_fare_thb": 5117,
+      "monthly_hours": 12.9,
+      "one_way_min": 18,
+      "one_way_thb": 119
+     },
+     "transit": {
+      "monthly_fare_thb": 946,
+      "monthly_hours": 10.0,
+      "one_way_min": 14,
+      "one_way_thb": 22
+     },
+     "walk": {
+      "monthly_fare_thb": 0,
+      "monthly_hours": 42.3,
+      "one_way_min": 59,
+      "one_way_thb": 0
+     }
+    },
+    "lat": 13.723,
+    "lon": 100.529,
+    "matched_amenities": [
+     "wifi",
+     "kitchen"
+    ],
+    "met_nearby": [
+     "gym",
+     "transit"
+    ],
+    "mode": "car",
+    "monthly_fare": 5117,
+    "monthly_hours": 12.9,
+    "name": "Lumpini Condo",
+    "offers": [],
+    "one_way_fare": 119,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 72,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.23,
+     "living": 1.0,
+     "location": 0.94
+    },
+    "time_cost": null,
+    "true_cost": 17117,
+    "true_cost_incl_time": null,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "",
+    "badge": null,
+    "commute_cost": 3311,
+    "commute_min": 8,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1290,
+      "monthly_hours": 3.6,
+      "one_way_min": 5,
+      "one_way_thb": 30
+     },
+     "car": {
+      "monthly_fare_thb": 3311,
+      "monthly_hours": 5.7,
+      "one_way_min": 8,
+      "one_way_thb": 77
+     },
+     "transit": {
+      "monthly_fare_thb": 688,
+      "monthly_hours": 4.3,
+      "one_way_min": 6,
+      "one_way_thb": 16
+     },
+     "walk": {
+      "monthly_fare_thb": 0,
+      "monthly_hours": 17.9,
+      "one_way_min": 25,
+      "one_way_thb": 0
+     }
+    },
+    "lat": 13.74,
+    "lon": 100.51,
+    "matched_amenities": [],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 3311,
+    "monthly_hours": 5.7,
+    "name": "Riverside Hostel",
+    "offers": [],
+    "one_way_fare": 77,
+    "price_known": false,
+    "rent": null,
+    "reviews": [],
+    "score": 49,
+    "source": "osm",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.5,
+     "living": 0.7,
+     "location": 0.28
+    },
+    "time_cost": null,
+    "true_cost": null,
+    "true_cost_incl_time": null,
+    "type": "hostel",
+    "vibe": null
+   }
+  ],
+  [
+   {
+    "area": "",
+    "badge": null,
+    "commute_cost": 645,
+    "commute_min": 5,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 645,
+      "monthly_hours": 2.1,
+      "one_way_min": 5,
+      "one_way_thb": 25
+     },
+     "car": {
+      "monthly_fare_thb": 1651,
+      "monthly_hours": 3.4,
+      "one_way_min": 8,
+      "one_way_thb": 64
+     },
+     "transit": {
+      "monthly_fare_thb": 413,
+      "monthly_hours": 2.6,
+      "one_way_min": 6,
+      "one_way_thb": 16
+     },
+     "walk": {
+      "monthly_fare_thb": 0,
+      "monthly_hours": 10.8,
+      "one_way_min": 25,
+      "one_way_thb": 0
+     }
+    },
+    "lat": 13.74,
+    "lon": 100.51,
+    "matched_amenities": [],
+    "met_nearby": [],
+    "mode": "bike",
+    "monthly_fare": 645,
+    "monthly_hours": 2.1,
+    "name": "Riverside Hostel",
+    "offers": [],
+    "one_way_fare": 25,
+    "price_known": false,
+    "rent": null,
+    "reviews": [],
+    "score": 47,
+    "source": "osm",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.5,
+     "living": 0.49,
+     "location": 0.12
+    },
+    "time_cost": 210,
+    "true_cost": null,
+    "true_cost_incl_time": null,
+    "type": "hostel",
+    "vibe": null
+   },
+   {
+    "area": "Sathorn",
+    "badge": null,
+    "commute_cost": 1109,
+    "commute_min": 12,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1109,
+      "monthly_hours": 5.2,
+      "one_way_min": 12,
+      "one_way_thb": 43
+     },
+     "car": {
+      "monthly_fare_thb": 2554,
+      "monthly_hours": 7.7,
+      "one_way_min": 18,
+      "one_way_thb": 99
+     },
+     "transit": {
+      "monthly_fare_thb": 568,
+      "monthly_hours": 6.0,
+      "one_way_min": 14,
+      "one_way_thb": 22
+     },
+     "walk": {
+      "monthly_fare_thb": 0,
+      "monthly_hours": 25.4,
+      "one_way_min": 59,
+      "one_way_thb": 0
+     }
+    },
+    "lat": 13.723,
+    "lon": 100.529,
+    "matched_amenities": [],
+    "met_nearby": [
+     "supermarket"
+    ],
+    "mode": "bike",
+    "monthly_fare": 1109,
+    "monthly_hours": 5.2,
+    "name": "Lumpini Condo",
+    "offers": [],
+    "one_way_fare": 43,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 16,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.1,
+     "living": 0.59,
+     "location": 0.65
+    },
+    "time_cost": 520,
+    "true_cost": 13109,
+    "true_cost_incl_time": 13629,
+    "type": "condo",
+    "vibe": "quiet"
+   }
+  ],
+  [
+   {
+    "area": "Sathorn",
+    "badge": null,
+    "commute_cost": 5117,
+    "commute_min": 18,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 2150,
+      "monthly_hours": 8.6,
+      "one_way_min": 12,
+      "one_way_thb": 50
+     },
+     "car": {
+      "monthly_fare_thb": 5117,
+      "monthly_hours": 12.9,
+      "one_way_min": 18,
+      "one_way_thb": 119
+     },
+     "transit": {
+      "monthly_fare_thb": 946,
+      "monthly_hours": 10.0,
+      "one_way_min": 14,
+      "one_way_thb": 22
+     },
+     "walk": {
+      "monthly_fare_thb": 0,
+      "monthly_hours": 42.3,
+      "one_way_min": 59,
+      "one_way_thb": 0
+     }
+    },
+    "lat": 13.723,
+    "lon": 100.529,
+    "matched_amenities": [
+     "wifi"
+    ],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 5117,
+    "monthly_hours": 12.9,
+    "name": "Lumpini Condo",
+    "offers": [],
+    "one_way_fare": 119,
+    "price_known": true,
+    "rent": 12000,
+    "reviews": [
+     {
+      "stars": 4,
+      "text": "nice"
+     }
+    ],
+    "score": 70,
+    "source": "mock",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 1.0,
+     "living": 0.89,
+     "location": 0.51
+    },
+    "time_cost": null,
+    "true_cost": 17117,
+    "true_cost_incl_time": null,
+    "type": "condo",
+    "vibe": "quiet"
+   },
+   {
+    "area": "",
+    "badge": null,
+    "commute_cost": 3311,
+    "commute_min": 8,
+    "fares": {
+     "bike": {
+      "monthly_fare_thb": 1290,
+      "monthly_hours": 3.6,
+      "one_way_min": 5,
+      "one_way_thb": 30
+     },
+     "car": {
+      "monthly_fare_thb": 3311,
+      "monthly_hours": 5.7,
+      "one_way_min": 8,
+      "one_way_thb": 77
+     },
+     "transit": {
+      "monthly_fare_thb": 688,
+      "monthly_hours": 4.3,
+      "one_way_min": 6,
+      "one_way_thb": 16
+     },
+     "walk": {
+      "monthly_fare_thb": 0,
+      "monthly_hours": 17.9,
+      "one_way_min": 25,
+      "one_way_thb": 0
+     }
+    },
+    "lat": 13.74,
+    "lon": 100.51,
+    "matched_amenities": [],
+    "met_nearby": [],
+    "mode": "car",
+    "monthly_fare": 3311,
+    "monthly_hours": 5.7,
+    "name": "Riverside Hostel",
+    "offers": [],
+    "one_way_fare": 77,
+    "price_known": false,
+    "rent": null,
+    "reviews": [],
+    "score": 46,
+    "source": "osm",
+    "sources": [],
+    "stars": null,
+    "subscores": {
+     "cost": 0.5,
+     "living": 0.42,
+     "location": 0.47
+    },
+    "time_cost": null,
+    "true_cost": null,
+    "true_cost_incl_time": null,
+    "type": "hostel",
+    "vibe": null
+   }
+  ]
+ ],
+ "score_listing": [
+  {
+   "area": "Sathorn",
+   "badge": null,
+   "commute_cost": 5117,
+   "commute_min": 18,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 2150,
+     "monthly_hours": 8.6,
+     "one_way_min": 12,
+     "one_way_thb": 50
+    },
+    "car": {
+     "monthly_fare_thb": 5117,
+     "monthly_hours": 12.9,
+     "one_way_min": 18,
+     "one_way_thb": 119
+    },
+    "transit": {
+     "monthly_fare_thb": 946,
+     "monthly_hours": 10.0,
+     "one_way_min": 14,
+     "one_way_thb": 22
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 42.3,
+     "one_way_min": 59,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.723,
+   "lon": 100.529,
+   "matched_amenities": [
+    "wifi",
+    "kitchen"
+   ],
+   "met_nearby": [
+    "gym",
+    "transit"
+   ],
+   "mode": "car",
+   "monthly_fare": 5117,
+   "monthly_hours": 12.9,
+   "name": "Lumpini Condo",
+   "offers": [],
+   "one_way_fare": 119,
+   "price_known": true,
+   "rent": 12000,
+   "reviews": [
+    {
+     "stars": 4,
+     "text": "nice"
+    }
+   ],
+   "score": 72,
+   "source": "mock",
+   "sources": [],
+   "stars": null,
+   "subscores": {
+    "cost": 0.23,
+    "living": 1.0,
+    "location": 0.94
+   },
+   "time_cost": null,
+   "true_cost": 17117,
+   "true_cost_incl_time": null,
+   "type": "condo",
+   "vibe": "quiet"
+  },
+  {
+   "area": "",
+   "badge": null,
+   "commute_cost": 3311,
+   "commute_min": 8,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 1290,
+     "monthly_hours": 3.6,
+     "one_way_min": 5,
+     "one_way_thb": 30
+    },
+    "car": {
+     "monthly_fare_thb": 3311,
+     "monthly_hours": 5.7,
+     "one_way_min": 8,
+     "one_way_thb": 77
+    },
+    "transit": {
+     "monthly_fare_thb": 688,
+     "monthly_hours": 4.3,
+     "one_way_min": 6,
+     "one_way_thb": 16
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 17.9,
+     "one_way_min": 25,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.74,
+   "lon": 100.51,
+   "matched_amenities": [],
+   "met_nearby": [],
+   "mode": "car",
+   "monthly_fare": 3311,
+   "monthly_hours": 5.7,
+   "name": "Riverside Hostel",
+   "offers": [],
+   "one_way_fare": 77,
+   "price_known": false,
+   "rent": null,
+   "reviews": [],
+   "score": 49,
+   "source": "osm",
+   "sources": [],
+   "stars": null,
+   "subscores": {
+    "cost": 0.5,
+    "living": 0.7,
+    "location": 0.28
+   },
+   "time_cost": null,
+   "true_cost": null,
+   "true_cost_incl_time": null,
+   "type": "hostel",
+   "vibe": null
+  },
+  {
+   "area": "Thonglor",
+   "badge": null,
+   "commute_cost": 8127,
+   "commute_min": 35,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 3526,
+     "monthly_hours": 17.2,
+     "one_way_min": 24,
+     "one_way_thb": 82
+    },
+    "car": {
+     "monthly_fare_thb": 8127,
+     "monthly_hours": 25.1,
+     "one_way_min": 35,
+     "one_way_thb": 189
+    },
+    "transit": {
+     "monthly_fare_thb": 1419,
+     "monthly_hours": 20.1,
+     "one_way_min": 28,
+     "one_way_thb": 33
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 82.4,
+     "one_way_min": 115,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.731,
+   "lon": 100.583,
+   "matched_amenities": [
+    "wifi"
+   ],
+   "met_nearby": [],
+   "mode": "car",
+   "monthly_fare": 8127,
+   "monthly_hours": 25.1,
+   "name": "Thonglor Suites",
+   "offers": [],
+   "one_way_fare": 189,
+   "price_known": true,
+   "rent": 22000,
+   "reviews": [],
+   "score": 30,
+   "source": "travelpayouts",
+   "sources": [],
+   "stars": 4,
+   "subscores": {
+    "cost": 0.1,
+    "living": 0.6,
+    "location": 0.2
+   },
+   "time_cost": null,
+   "true_cost": 30127,
+   "true_cost_incl_time": null,
+   "type": "hotel",
+   "vibe": "lively"
+  },
+  {
+   "area": "Sathorn",
+   "badge": null,
+   "commute_cost": 1109,
+   "commute_min": 12,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 1109,
+     "monthly_hours": 5.2,
+     "one_way_min": 12,
+     "one_way_thb": 43
+    },
+    "car": {
+     "monthly_fare_thb": 2554,
+     "monthly_hours": 7.7,
+     "one_way_min": 18,
+     "one_way_thb": 99
+    },
+    "transit": {
+     "monthly_fare_thb": 568,
+     "monthly_hours": 6.0,
+     "one_way_min": 14,
+     "one_way_thb": 22
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 25.4,
+     "one_way_min": 59,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.723,
+   "lon": 100.529,
+   "matched_amenities": [],
+   "met_nearby": [
+    "supermarket"
+   ],
+   "mode": "bike",
+   "monthly_fare": 1109,
+   "monthly_hours": 5.2,
+   "name": "Lumpini Condo",
+   "offers": [],
+   "one_way_fare": 43,
+   "price_known": true,
+   "rent": 12000,
+   "reviews": [
+    {
+     "stars": 4,
+     "text": "nice"
+    }
+   ],
+   "score": 16,
+   "source": "mock",
+   "sources": [],
+   "stars": null,
+   "subscores": {
+    "cost": 0.1,
+    "living": 0.59,
+    "location": 0.65
+   },
+   "time_cost": 520,
+   "true_cost": 13109,
+   "true_cost_incl_time": 13629,
+   "type": "condo",
+   "vibe": "quiet"
+  },
+  {
+   "area": "",
+   "badge": null,
+   "commute_cost": 645,
+   "commute_min": 5,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 645,
+     "monthly_hours": 2.1,
+     "one_way_min": 5,
+     "one_way_thb": 25
+    },
+    "car": {
+     "monthly_fare_thb": 1651,
+     "monthly_hours": 3.4,
+     "one_way_min": 8,
+     "one_way_thb": 64
+    },
+    "transit": {
+     "monthly_fare_thb": 413,
+     "monthly_hours": 2.6,
+     "one_way_min": 6,
+     "one_way_thb": 16
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 10.8,
+     "one_way_min": 25,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.74,
+   "lon": 100.51,
+   "matched_amenities": [],
+   "met_nearby": [],
+   "mode": "bike",
+   "monthly_fare": 645,
+   "monthly_hours": 2.1,
+   "name": "Riverside Hostel",
+   "offers": [],
+   "one_way_fare": 25,
+   "price_known": false,
+   "rent": null,
+   "reviews": [],
+   "score": 47,
+   "source": "osm",
+   "sources": [],
+   "stars": null,
+   "subscores": {
+    "cost": 0.5,
+    "living": 0.49,
+    "location": 0.12
+   },
+   "time_cost": 210,
+   "true_cost": null,
+   "true_cost_incl_time": null,
+   "type": "hostel",
+   "vibe": null
+  },
+  {
+   "area": "Thonglor",
+   "badge": null,
+   "commute_cost": 1858,
+   "commute_min": 24,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 1858,
+     "monthly_hours": 10.3,
+     "one_way_min": 24,
+     "one_way_thb": 72
+    },
+    "car": {
+     "monthly_fare_thb": 4076,
+     "monthly_hours": 15.1,
+     "one_way_min": 35,
+     "one_way_thb": 158
+    },
+    "transit": {
+     "monthly_fare_thb": 851,
+     "monthly_hours": 12.0,
+     "one_way_min": 28,
+     "one_way_thb": 33
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 49.5,
+     "one_way_min": 115,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.731,
+   "lon": 100.583,
+   "matched_amenities": [],
+   "met_nearby": [],
+   "mode": "bike",
+   "monthly_fare": 1858,
+   "monthly_hours": 10.3,
+   "name": "Thonglor Suites",
+   "offers": [],
+   "one_way_fare": 72,
+   "price_known": true,
+   "rent": 22000,
+   "reviews": [],
+   "score": 7,
+   "source": "travelpayouts",
+   "sources": [],
+   "stars": 4,
+   "subscores": {
+    "cost": 0.1,
+    "living": 0.64,
+    "location": 0.2
+   },
+   "time_cost": 1030,
+   "true_cost": 23858,
+   "true_cost_incl_time": 24888,
+   "type": "hotel",
+   "vibe": "lively"
+  },
+  {
+   "area": "Sathorn",
+   "badge": null,
+   "commute_cost": 5117,
+   "commute_min": 18,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 2150,
+     "monthly_hours": 8.6,
+     "one_way_min": 12,
+     "one_way_thb": 50
+    },
+    "car": {
+     "monthly_fare_thb": 5117,
+     "monthly_hours": 12.9,
+     "one_way_min": 18,
+     "one_way_thb": 119
+    },
+    "transit": {
+     "monthly_fare_thb": 946,
+     "monthly_hours": 10.0,
+     "one_way_min": 14,
+     "one_way_thb": 22
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 42.3,
+     "one_way_min": 59,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.723,
+   "lon": 100.529,
+   "matched_amenities": [
+    "wifi"
+   ],
+   "met_nearby": [],
+   "mode": "car",
+   "monthly_fare": 5117,
+   "monthly_hours": 12.9,
+   "name": "Lumpini Condo",
+   "offers": [],
+   "one_way_fare": 119,
+   "price_known": true,
+   "rent": 12000,
+   "reviews": [
+    {
+     "stars": 4,
+     "text": "nice"
+    }
+   ],
+   "score": 70,
+   "source": "mock",
+   "sources": [],
+   "stars": null,
+   "subscores": {
+    "cost": 1.0,
+    "living": 0.89,
+    "location": 0.51
+   },
+   "time_cost": null,
+   "true_cost": 17117,
+   "true_cost_incl_time": null,
+   "type": "condo",
+   "vibe": "quiet"
+  },
+  {
+   "area": "",
+   "badge": null,
+   "commute_cost": 3311,
+   "commute_min": 8,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 1290,
+     "monthly_hours": 3.6,
+     "one_way_min": 5,
+     "one_way_thb": 30
+    },
+    "car": {
+     "monthly_fare_thb": 3311,
+     "monthly_hours": 5.7,
+     "one_way_min": 8,
+     "one_way_thb": 77
+    },
+    "transit": {
+     "monthly_fare_thb": 688,
+     "monthly_hours": 4.3,
+     "one_way_min": 6,
+     "one_way_thb": 16
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 17.9,
+     "one_way_min": 25,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.74,
+   "lon": 100.51,
+   "matched_amenities": [],
+   "met_nearby": [],
+   "mode": "car",
+   "monthly_fare": 3311,
+   "monthly_hours": 5.7,
+   "name": "Riverside Hostel",
+   "offers": [],
+   "one_way_fare": 77,
+   "price_known": false,
+   "rent": null,
+   "reviews": [],
+   "score": 46,
+   "source": "osm",
+   "sources": [],
+   "stars": null,
+   "subscores": {
+    "cost": 0.5,
+    "living": 0.42,
+    "location": 0.47
+   },
+   "time_cost": null,
+   "true_cost": null,
+   "true_cost_incl_time": null,
+   "type": "hostel",
+   "vibe": null
+  },
+  {
+   "area": "Thonglor",
+   "badge": null,
+   "commute_cost": 8127,
+   "commute_min": 35,
+   "fares": {
+    "bike": {
+     "monthly_fare_thb": 3526,
+     "monthly_hours": 17.2,
+     "one_way_min": 24,
+     "one_way_thb": 82
+    },
+    "car": {
+     "monthly_fare_thb": 8127,
+     "monthly_hours": 25.1,
+     "one_way_min": 35,
+     "one_way_thb": 189
+    },
+    "transit": {
+     "monthly_fare_thb": 1419,
+     "monthly_hours": 20.1,
+     "one_way_min": 28,
+     "one_way_thb": 33
+    },
+    "walk": {
+     "monthly_fare_thb": 0,
+     "monthly_hours": 82.4,
+     "one_way_min": 115,
+     "one_way_thb": 0
+    }
+   },
+   "lat": 13.731,
+   "lon": 100.583,
+   "matched_amenities": [
+    "wifi"
+   ],
+   "met_nearby": [],
+   "mode": "car",
+   "monthly_fare": 8127,
+   "monthly_hours": 25.1,
+   "name": "Thonglor Suites",
+   "offers": [],
+   "one_way_fare": 189,
+   "price_known": true,
+   "rent": 22000,
+   "reviews": [],
+   "score": 71,
+   "source": "travelpayouts",
+   "sources": [],
+   "stars": 4,
+   "subscores": {
+    "cost": 1.0,
+    "living": 0.72,
+    "location": 0.65
+   },
+   "time_cost": null,
+   "true_cost": 30127,
+   "true_cost_incl_time": null,
+   "type": "hotel",
+   "vibe": "lively"
+  }
+ ],
+ "sharpen": [
+  {
+   "cost": 0.33333333333333337,
+   "living": 0.33333333333333337,
+   "location": 0.33333333333333337
+  },
+  {
+   "cost": 0.792044491816199,
+   "living": 0.07138542607613337,
+   "location": 0.13657008210766758
+  },
+  {
+   "cost": 0.0,
+   "living": 0.0,
+   "location": 0.0
+  }
+ ]
+}

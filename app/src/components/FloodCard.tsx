@@ -48,7 +48,9 @@ export function FloodCard({ flood, rainySeason }: { flood: FloodRisk; rainySeaso
 
       <div className="mt-2 flex items-center gap-1.5 text-xs text-muted font-medium">
         <Droplets className="h-3.5 w-3.5 shrink-0" />
-        ~{Math.round(flood.week_rain_mm)} mm of rain forecast over 7 days
+        {flood.heavy_rain_pct != null
+          ? <>~{Math.round(flood.heavy_rain_pct)}% of days this month typically see heavy rain</>
+          : <>seasonal rain data unavailable — season-only estimate</>}
         {flood.elevation_m != null && <> · ~{Math.round(flood.elevation_m)} m elevation</>}
       </div>
 

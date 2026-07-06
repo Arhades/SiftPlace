@@ -9,14 +9,21 @@ Endpoints:
     GET  /health              — sanity check
     GET  /rates               — daily-cached FX table (THB base) for the currency selector
     GET  /geocode?q=...       — place name -> coordinates (Nominatim, Photon fallback)
-    GET  /flood-risk?lat=&lon= — Open-Meteo forecast + rainy-season flood heuristic
+    GET  /flood-risk?lat=&lon= — seasonal heavy-rain climatology + flood heuristic
     POST /parse               — free-text "anything else?" -> structured demands (NLP)
     POST /score               — rank the bundled DEMO listings (mock Bangkok data)
     POST /search              — rank REAL listings (OSM + configured affiliate feeds)
+    GET  /admin               — founder dashboard page (asks for the admin token)
+    GET  /admin/stats         — usage + API-budget numbers   (ADMIN_TOKEN required)
+    POST /admin/retrain       — refit + reload the NLP model (ADMIN_TOKEN required)
 
 No login wall: /search, /parse and /geocode are protected by per-IP rate limits
 (slowapi) and an OPTIONAL Cloudflare Turnstile check (enabled by setting
 TURNSTILE_SECRET_KEY; the frontend then sends an x-turnstile-token header).
+
+The /admin routes are gated SERVER-SIDE by the ADMIN_TOKEN env var (compared
+constant-time). Never gate admin data with a client-side password: anyone can
+read page source, so it protects nothing.
 
 Interactive docs: http://localhost:8000/docs
 """
@@ -25,11 +32,13 @@ from __future__ import annotations
 import json
 import os
 import pathlib
+import secrets
 
 import requests as _requests
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 
 # Load backend/.env (if present) into the process environment BEFORE any
 # module below reads os.environ — this is what makes .env.example's
@@ -41,10 +50,11 @@ load_dotenv()
 from flood import flood_risk
 from geocode import geocode as geocode_fn
 from models import (CityScoreRequest, ParseRequest, ScoreRequest, ScoreResponse)
-from nlp import parse_notes
+from nlp import model_info, parse_notes, reload_model
 from rates import get_rates, to_thb
 from scoring import rank_listings
 from search import build_and_score
+from usage import get_stats, log_search, reset_network_flag
 
 DATA = pathlib.Path(__file__).parent / "data" / "sample_listings.json"
 LISTINGS = json.loads(DATA.read_text(encoding="utf-8"))
@@ -134,14 +144,14 @@ def geocode_endpoint(request: Request, q: str):
 
 @app.get("/flood-risk")
 def flood_endpoint(lat: float, lon: float):
-    """Weather forecast + heuristic flood-risk indicator (open data, cached)."""
+    """Seasonal heavy-rain likelihood + heuristic flood indicator (open data, cached)."""
     return flood_risk(lat, lon)
 
 
 @app.post("/parse")
 @rate_limit(PARSE_LIMIT)
 def parse_endpoint(request: Request, req: ParseRequest):
-    """Turn a free-text note into structured demands. LLM when configured, else rules."""
+    """Turn a free-text note into structured demands (trained model + keyword rules)."""
     return parse_notes(req.text)
 
 
@@ -185,6 +195,9 @@ def _merge_parsed(prefs: dict, parsed: dict) -> None:
 def search(request: Request, req: CityScoreRequest):
     """Find and rank REAL listings for any city (OSM + configured partner feeds)."""
     require_human(request)
+    # usage accounting: the fetch modules flip this flag on any real network
+    # call; log_search() below then knows cache-hit vs live
+    reset_network_flag()
 
     # everything downstream runs in THB; the user's budget may not
     budget_thb = to_thb(req.budget, req.currency)
@@ -217,9 +230,60 @@ def search(request: Request, req: CityScoreRequest):
     out = build_and_score(prefs, city=req.city,
                           radius_m=req.radius_m, max_listings=req.max_listings,
                           check_in=req.check_in, check_out=req.check_out)
+    log_search(request.client.host if request.client else "unknown")
     return {"count": out.get("count", 0), "results": out.get("results", []),
             "note": out.get("error") or out.get("note"),
             "centre": out.get("centre"), "radius_used": out.get("radius_used"),
             "stay_months": out.get("stay_months"),
             "rainy_season": out.get("rainy_season", False),
             "parsed": parsed, "providers": out.get("providers", [])}
+
+
+# --- founder admin (server-side ADMIN_TOKEN gate) -------------------------------
+
+ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN", "").strip()
+ADMIN_HTML = pathlib.Path(__file__).parent / "admin.html"
+
+
+def require_admin(request: Request) -> None:
+    """403 unless the request carries the ADMIN_TOKEN. The check runs on the
+    BACKEND with a constant-time compare — a client-side password would be
+    readable by anyone in the page source and protect nothing."""
+    if not ADMIN_TOKEN:
+        raise HTTPException(status_code=403,
+                            detail="admin disabled — set ADMIN_TOKEN in backend/.env")
+    supplied = request.headers.get("authorization", "")
+    if supplied.lower().startswith("bearer "):
+        supplied = supplied[7:]
+    if not secrets.compare_digest(supplied.strip(), ADMIN_TOKEN):
+        raise HTTPException(status_code=403, detail="bad admin token")
+
+
+@app.get("/admin", response_class=HTMLResponse, include_in_schema=False)
+def admin_page():
+    """The founder dashboard shell — a public, static page holding no data.
+    Its JavaScript asks for the token and calls /admin/stats with it."""
+    try:
+        return ADMIN_HTML.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        return HTMLResponse("admin.html missing", status_code=404)
+
+
+@app.get("/admin/stats")
+def admin_stats(request: Request):
+    """Usage + free-API budget numbers for the founder (see usage.py)."""
+    require_admin(request)
+    stats = get_stats()
+    stats["nlp_model"] = model_info()
+    return stats
+
+
+@app.post("/admin/retrain")
+def admin_retrain(request: Request):
+    """Refit the NLP classifier on all accumulated notes and hot-reload it.
+    Batch retraining on demand — never per request."""
+    require_admin(request)
+    from nlp_train import train_and_save
+    result = train_and_save(verbose=False)
+    result["model_reloaded"] = reload_model() if result.get("trained") else False
+    return result

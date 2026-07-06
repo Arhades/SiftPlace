@@ -17,6 +17,8 @@ import time
 
 import requests
 
+from usage import count_api_call
+
 BASE_CURRENCY = "THB"
 
 # Currencies the product exposes (selector order). Symbols for the frontend.
@@ -48,6 +50,7 @@ _cache: dict = {"fetched_at": 0.0, "rates": None, "source": "fallback"}
 def _fetch_live() -> dict[str, float] | None:
     """{currency: units per 1 THB} for the supported set, or None on failure."""
     try:
+        count_api_call("er-api")
         r = requests.get(RATES_URL, timeout=10)
         r.raise_for_status()
         data = r.json()

@@ -27,8 +27,9 @@ class ScoreRequest(BaseModel):
     vibe: str | None = Field(None, description="quiet or lively (or omit)")
     types: list[str] = Field(default_factory=list, description="condo, hotel, hostel")
     amenities: list[str] = Field(default_factory=list)
-    commute_mode: Literal["car", "bike"] = Field(
-        "car", description="Ride-hailing car (Grab/Bolt) or motorbike taxi — drives the fare")
+    commute_mode: Literal["car", "bike", "transit", "walk"] = Field(
+        "car", description="Private-hire car, motorbike taxi, public transport "
+                           "or walking — drives the fare")
     provider: Literal["grab", "bolt"] = Field("grab", description="Fare rate table to use")
     value_of_time: int = Field(
         0, ge=0, description="THB/hour you put on commute time; 0 = ignore time in ranking")
@@ -59,8 +60,9 @@ class CityScoreRequest(BaseModel):
     vibe: str | None = None
     types: list[str] = Field(default_factory=list)
     amenities: list[str] = Field(default_factory=list)
-    commute_mode: Literal["car", "bike"] = Field(
-        "car", description="Ride-hailing car (Grab/Bolt) or motorbike taxi — drives the fare")
+    commute_mode: Literal["car", "bike", "transit", "walk"] = Field(
+        "car", description="Private-hire car, motorbike taxi, public transport "
+                           "or walking — drives the fare")
     provider: Literal["grab", "bolt"] = Field("grab", description="Fare rate table to use")
     value_of_time: int = Field(
         0, ge=0, description="THB/hour you put on commute time; 0 = ignore time in ranking")

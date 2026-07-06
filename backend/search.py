@@ -80,11 +80,12 @@ def apply_spread(results: list[dict], top_n: int) -> list[dict]:
         return results
     top = results[: top_n]
 
-    priced = [r for r in results if r["price_known"] and r.get("true_cost") is not None]
-    best_value = min(priced, key=lambda r: r["true_cost"]) if priced else None
+    priced = [result for result in results
+              if result["price_known"] and result.get("true_cost") is not None]
+    best_value = min(priced, key=lambda result: result["true_cost"]) if priced else None
     best_quality = max(
         results,
-        key=lambda r: (r.get("stars") or 0, r["subscores"].get("living", 0)),
+        key=lambda result: (result.get("stars") or 0, result["subscores"].get("living", 0)),
     ) if len(results) > 1 else None
 
     for pick in (best_value, best_quality):
@@ -92,10 +93,10 @@ def apply_spread(results: list[dict], top_n: int) -> list[dict]:
             top[-1] = pick
     # de-dup in case best_value == best_quality replaced the same slot twice
     seen, unique = set(), []
-    for r in top:
-        if id(r) not in seen:
-            seen.add(id(r))
-            unique.append(r)
+    for result in top:
+        if id(result) not in seen:
+            seen.add(id(result))
+            unique.append(result)
     top = unique
 
     top[0]["badge"] = "top_match"
@@ -116,11 +117,11 @@ def build_and_score(prefs: dict, city: str | None = None,
     if anchor and anchor[0] is not None and anchor[1] is not None:
         centre = (anchor[0], anchor[1])
     elif city:
-        g = geocode(city, prefer_city=True)
-        if not g:
+        geo = geocode(city, prefer_city=True)
+        if not geo:
             return {"error": f"Could not locate '{city}'.", "results": [], "count": 0}
-        centre = (g["lat"], g["lon"])
-        prefs["anchor"] = [g["lat"], g["lon"]]
+        centre = (geo["lat"], geo["lon"])
+        prefs["anchor"] = [geo["lat"], geo["lon"]]
     else:
         return {"error": "Provide a city or anchor coordinates.", "results": [], "count": 0}
 
@@ -147,20 +148,24 @@ def build_and_score(prefs: dict, city: str | None = None,
     poi_map = fetch_pois(centre[0], centre[1], wanted, radius_used + 1000) if wanted else {}
 
     listings = []
-    for m in merged:
-        nb = {}
+    for place in merged:
+        # metres from this place to the nearest POI of each wanted kind
+        nearby_distances = {}
         for kind in wanted:
-            d = nearest(m["lat"], m["lon"], poi_map.get(kind, []))
-            if d is not None:
-                nb[kind] = d
+            metres = nearest(place["lat"], place["lon"], poi_map.get(kind, []))
+            if metres is not None:
+                nearby_distances[kind] = metres
         listings.append({
-            "name": m["name"], "area": city or "", "lat": m["lat"], "lon": m["lon"],
-            "price": m["price"], "type": m["type"], "amenities": None, "nearby": nb,
+            "name": place["name"], "area": city or "",
+            "lat": place["lat"], "lon": place["lon"],
+            "price": place["price"], "type": place["type"],
+            "amenities": None, "nearby": nearby_distances,
             "street": {"vibe": None, "safety": 3}, "space_sqm": None,
-            "reviews": [], "source": "+".join(m["sources"]),
-            "offers": m["offers"], "sources": m["sources"],
-            "stars": m.get("stars"), "rating": m.get("rating"),
-            "capacity": m.get("capacity"), "min_stay_months": m.get("min_stay_months"),
+            "reviews": [], "source": "+".join(place["sources"]),
+            "offers": place["offers"], "sources": place["sources"],
+            "stars": place.get("stars"), "rating": place.get("rating"),
+            "capacity": place.get("capacity"),
+            "min_stay_months": place.get("min_stay_months"),
         })
 
     # 5) score everything, then guarantee a spread of picks in the top N

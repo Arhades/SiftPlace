@@ -16,15 +16,6 @@ import { cn } from "@/lib/utils";
 import { ChipSelect } from "./ChipSelect";
 import { WeightSliders, WEIGHT_CAP } from "./WeightSliders";
 
-/** Free-text "Other" answers, one slot per question (all flow into the NLP side). */
-export interface OtherAnswers {
-  nearby: string;
-  vibe: string;
-  types: string;
-  amenities: string;
-  mode: string;
-}
-
 export interface IntakeValues {
   weights: Weights;
   budget: number;
@@ -33,7 +24,6 @@ export interface IntakeValues {
   checkOut: string;
   occupancy: number;
   notes: string;
-  others: OtherAnswers;
   commuteDays: number;
   maxCommute: number;
   mode: CommuteMode;
@@ -55,7 +45,6 @@ export function defaultIntake(): IntakeValues {
     checkOut: "",
     occupancy: 1,
     notes: "",
-    others: { nearby: "", vibe: "", types: "", amenities: "", mode: "" },
     commuteDays: 5,
     maxCommute: 40,
     mode: "car",
@@ -67,13 +56,6 @@ export function defaultIntake(): IntakeValues {
     types: ["condo", "hostel", "hotel"],
     amenities: ["wifi", "desk"],
   };
-}
-
-/** other_terms for the API: every non-empty "Other" answer. */
-export function otherTerms(o: OtherAnswers): string[] {
-  return Object.values(o)
-    .map((s) => s.trim())
-    .filter(Boolean);
 }
 
 const FEATURED_CITIES = ["Bangkok", "Tokyo", "Seoul", "Singapore"];
@@ -111,8 +93,22 @@ export function Intake({
 }) {
   const [v, setV] = useState<IntakeValues>(initial);
   const update = (patch: Partial<IntakeValues>) => setV((p) => ({ ...p, ...patch }));
-  const updateOther = (key: keyof OtherAnswers, val: string) =>
-    setV((p) => ({ ...p, others: { ...p.others, [key]: val } }));
+
+  // Budget is edited through a string draft so the field can be emptied while
+  // retyping. Binding the number directly re-clamps "" to 1 on every keystroke,
+  // which made the first digit impossible to replace.
+  const [budgetText, setBudgetText] = useState(String(initial.budget));
+  const onBudgetType = (raw: string) => {
+    setBudgetText(raw);
+    const n = Number(raw);
+    if (raw.trim() !== "" && Number.isFinite(n) && n >= 1) {
+      update({ budget: n });
+    }
+  };
+  const onBudgetBlur = () => {
+    // leaving the field empty/invalid falls back to the last good value
+    setBudgetText(String(v.budget));
+  };
 
   // City type-ahead (reuses the waitlist's world-city directory)
   const [allCities, setAllCities] = useState<CityEntry[]>([]);
@@ -170,8 +166,9 @@ export function Intake({
 
   const changeCurrency = (cur: string) => {
     // keep the budget the same real value, re-expressed in the new currency
-    const converted = Math.round(fromTHB(toTHB(v.budget, v.currency), cur));
-    update({ currency: cur, budget: Math.max(1, converted) });
+    const converted = Math.max(1, Math.round(fromTHB(toTHB(v.budget, v.currency), cur)));
+    update({ currency: cur, budget: converted });
+    setBudgetText(String(converted));
   };
 
   const total = v.weights.cost + v.weights.location + v.weights.living;
@@ -200,8 +197,8 @@ export function Intake({
         </h1>
         <p className="mt-2 text-sm text-muted max-w-md mx-auto font-medium">
           Set what matters and we re-rank every listing by its{" "}
-          <span className="text-ink font-bold">true monthly cost</span> — rent plus the Grab/Bolt or
-          motorbike fare it takes to commute — not rent alone.
+          <span className="text-ink font-bold">true monthly cost</span> — rent plus what your
+          commute actually costs in fares and time — not rent alone.
         </p>
       </div>
 
@@ -342,9 +339,11 @@ export function Intake({
                 type="number"
                 min={1}
                 step="any"
+                inputMode="numeric"
                 className={cn(fieldCls, "min-w-0")}
-                value={v.budget}
-                onChange={(e) => update({ budget: Math.max(1, Number(e.target.value)) })}
+                value={budgetText}
+                onChange={(e) => onBudgetType(e.target.value)}
+                onBlur={onBudgetBlur}
               />
               <select
                 aria-label="Budget currency"
@@ -451,12 +450,6 @@ export function Intake({
               </button>
             ))}
           </div>
-          <input
-            className={cn(fieldCls, "mt-2")}
-            value={v.others.mode}
-            placeholder="Other (e.g. BTS + walk, own bicycle) — we'll factor it in"
-            onChange={(e) => updateOther("mode", e.target.value)}
-          />
         </div>
 
         {/* value of time */}
@@ -513,9 +506,6 @@ export function Intake({
             options={NEARBY_OPTIONS}
             value={v.nearby}
             onChange={(n) => update({ nearby: n })}
-            otherValue={v.others.nearby}
-            onOtherChange={(s) => updateOther("nearby", s)}
-            otherPlaceholder="Other nearby want (e.g. running park, night market)"
           />
         </div>
         <div>
@@ -524,9 +514,6 @@ export function Intake({
             options={VIBE_OPTIONS}
             value={v.vibe}
             onChange={(val) => update({ vibe: val })}
-            otherValue={v.others.vibe}
-            onOtherChange={(s) => updateOther("vibe", s)}
-            otherPlaceholder="Other vibe (e.g. leafy, local, arty)"
           />
         </div>
         <div>
@@ -536,9 +523,6 @@ export function Intake({
             options={TYPE_OPTIONS}
             value={v.types}
             onChange={(t) => update({ types: t })}
-            otherValue={v.others.types}
-            onOtherChange={(s) => updateOther("types", s)}
-            otherPlaceholder="Other place type (e.g. co-living, homestay)"
           />
         </div>
         <div>
@@ -548,9 +532,6 @@ export function Intake({
             options={AMENITY_OPTIONS}
             value={v.amenities}
             onChange={(a) => update({ amenities: a })}
-            otherValue={v.others.amenities}
-            onOtherChange={(s) => updateOther("amenities", s)}
-            otherPlaceholder="Other must-have (e.g. balcony, bathtub, parking)"
           />
         </div>
 
@@ -569,7 +550,7 @@ export function Intake({
           {parsed && parsed.detected.length > 0 && (
             <div className="mt-2">
               <p className="text-[11px] text-muted font-bold mb-1.5">
-                Got it — we detected{parsed.engine === "llm" ? " (AI)" : ""}:
+                Got it — we detected{parsed.engine.includes("model") ? " (AI)" : ""}:
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {parsed.detected.map((d) => (

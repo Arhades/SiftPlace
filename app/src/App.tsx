@@ -12,7 +12,7 @@ import {
   type SearchRequest,
 } from "@/lib/api";
 import { setRates } from "@/lib/currency";
-import { Intake, defaultIntake, otherTerms, type IntakeValues } from "@/components/Intake";
+import { Intake, defaultIntake, type IntakeValues } from "@/components/Intake";
 import { Results, type ResultsContext } from "@/components/Results";
 import { Saved } from "@/components/Saved";
 import { Areas } from "@/components/Areas";
@@ -50,7 +50,7 @@ function buildReq(
     check_out: v.checkOut || null,
     occupancy: v.occupancy,
     notes: v.notes || null,
-    other_terms: otherTerms(v.others),
+    other_terms: [], // the "Other…" chips were removed — the notes field covers free text
     commute_days: v.commuteDays,
     max_commute: v.maxCommute,
     nearby: v.nearby,
@@ -95,6 +95,12 @@ function App() {
   const [radius, setRadius] = useState(RADIUS_DEFAULT);
 
   const [tab, setTab] = useState<Tab>("listings");
+
+  // ---- duplicate-search protection ----------------------------------------
+  // Re-applying the filter without changing anything must NOT re-hit the
+  // backend (and through it the rate-limited free APIs) — the last result is
+  // already correct. Fingerprint of the last submitted intake values.
+  const lastSubmitRef = useRef<string>("");
 
   // ---- stale-search protection -------------------------------------------
   // Every apply aborts the in-flight request AND bumps a monotonic token, so a
@@ -184,8 +190,18 @@ function App() {
     }
   };
 
-  const handleSearch = async (values: IntakeValues) => {
+  const handleSearch = async (values: IntakeValues, force = false) => {
     setIntake(values);
+
+    // identical intake + a usable result on screen -> reuse it, don't refetch
+    // (force=true bypasses this for the explicit Retry button)
+    const fingerprint = JSON.stringify(values);
+    if (!force && fingerprint === lastSubmitRef.current
+        && (status === "ok" || status === "empty")) {
+      return;
+    }
+    lastSubmitRef.current = fingerprint;
+
     const handle = beginSearch();
     setGeoFailedMsg(null);
 
@@ -251,7 +267,7 @@ function App() {
   };
 
   const retry = () => {
-    void handleSearch(intake);
+    void handleSearch(intake, true);
   };
 
   const openFilter = () => {
