@@ -11,8 +11,11 @@ Endpoints:
     GET  /geocode?q=...       — place name -> coordinates (Nominatim, Photon fallback)
     GET  /flood-risk?lat=&lon= — seasonal heavy-rain climatology + flood heuristic
     POST /parse               — free-text "anything else?" -> structured demands (NLP)
+    POST /chat                — one Sift-mascot turn (Agnes AI -> OpenAI -> nlp.py chain)
     POST /score               — rank the bundled DEMO listings (mock Bangkok data)
-    POST /search              — rank REAL listings (OSM + configured affiliate feeds)
+    POST /search              — rank REAL listings, PAGINATED (page/page_size -> total)
+    POST /feedback            — community "was this accurate?" vote / scam report
+    POST /notes/delete        — privacy: remove a stored note from NLP training data
     GET  /admin               — founder dashboard page (asks for the admin token)
     GET  /admin/stats         — usage + API-budget numbers   (ADMIN_TOKEN required)
     POST /admin/retrain       — refit + reload the NLP model (ADMIN_TOKEN required)
@@ -47,13 +50,20 @@ from fastapi.responses import HTMLResponse
 # file present (no-op).
 load_dotenv()
 
+import math
+
+from feedback import add_feedback, attach_community, feedback_stats
 from flood import flood_risk
 from geocode import geocode as geocode_fn
-from models import (CityScoreRequest, ParseRequest, ScoreRequest, ScoreResponse)
-from nlp import model_info, parse_notes, reload_model
+from llm import chat_reply, explain_listings
+from models import (ChatRequest, ChatResponse, CityScoreRequest, FeedbackRequest,
+                    NoteDeleteRequest, ParseRequest, ScoreRequest, ScoreResponse)
+from nlp import (delete_training_examples, model_info, parse_notes, record_note,
+                 reload_model)
 from rates import get_rates, to_thb
 from scoring import rank_listings
 from search import build_and_score
+from semantic import explain_enabled, semantic_rerank
 from usage import get_stats, log_search, reset_network_flag
 
 DATA = pathlib.Path(__file__).parent / "data" / "sample_listings.json"
@@ -61,11 +71,19 @@ LISTINGS = json.loads(DATA.read_text(encoding="utf-8"))
 
 app = FastAPI(title="SiftPlace API", version="0.3.0")
 
-# Allow the local frontend (and anything during dev) to call us.
-# TODO: tighten allow_origins to your real domain before any public deploy.
+# CORS allowlist: the deployed frontend domain(s) plus localhost for dev.
+# Override/extend with SIFTPLACE_ALLOWED_ORIGINS (comma-separated). Setting it
+# to "*" re-opens everything (dev escape hatch only).
+_DEFAULT_ORIGINS = (
+    "https://sift-place.vercel.app,"
+    "http://localhost:5173,http://127.0.0.1:5173,"
+    "http://localhost:4173,http://localhost:3000"
+)
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get(
+    "SIFTPLACE_ALLOWED_ORIGINS", _DEFAULT_ORIGINS).split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["*"] if "*" in ALLOWED_ORIGINS else ALLOWED_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -89,9 +107,15 @@ except ImportError:  # pragma: no cover
             return fn
         return passthrough
 
-SEARCH_LIMIT = os.environ.get("SIFTPLACE_SEARCH_LIMIT", "15/minute")
+# /search allows page flips (each page is a request, served mostly from cache)
+SEARCH_LIMIT = os.environ.get("SIFTPLACE_SEARCH_LIMIT", "30/minute")
 PARSE_LIMIT = os.environ.get("SIFTPLACE_PARSE_LIMIT", "30/minute")
 GEOCODE_LIMIT = os.environ.get("SIFTPLACE_GEOCODE_LIMIT", "30/minute")
+CHAT_LIMIT = os.environ.get("SIFTPLACE_CHAT_LIMIT", "20/minute")
+FEEDBACK_LIMIT = os.environ.get("SIFTPLACE_FEEDBACK_LIMIT", "10/minute")
+
+# privacy kill switch: set to disable note storage entirely, whatever clients send
+TRAINING_DISABLED = os.environ.get("NLP_TRAINING_DISABLED", "").strip() in ("1", "true", "yes")
 
 # --- optional human check (Cloudflare Turnstile) — never a signup gate --------
 TURNSTILE_SECRET = os.environ.get("TURNSTILE_SECRET_KEY", "").strip()
@@ -151,8 +175,38 @@ def flood_endpoint(lat: float, lon: float):
 @app.post("/parse")
 @rate_limit(PARSE_LIMIT)
 def parse_endpoint(request: Request, req: ParseRequest):
-    """Turn a free-text note into structured demands (trained model + keyword rules)."""
+    """Turn a free-text note into structured demands (trained model + keyword
+    rules). Read-only — live previews are never stored as training data."""
     return parse_notes(req.text)
+
+
+@app.post("/chat", response_model=ChatResponse)
+@rate_limit(CHAT_LIMIT)
+def chat_endpoint(request: Request, req: ChatRequest):
+    """One turn of the Sift mascot conversation. The LLM chain (Agnes AI ->
+    OpenAI -> offline nlp.py rules) replies AND extracts structured demands in
+    the same shape /parse returns — the frontend applies them to the filters."""
+    require_human(request)
+    messages = [{"role": m.role, "content": m.content} for m in req.messages]
+    return chat_reply(messages, req.filters_summary)
+
+
+@app.post("/feedback")
+@rate_limit(FEEDBACK_LIMIT)
+def feedback_endpoint(request: Request, req: FeedbackRequest):
+    """Community accuracy vote (+ optional scam report) for a listing. One vote
+    per source per listing (re-votes update); aggregates come back with search
+    results, report texts stay founder-only."""
+    return add_feedback(req.name, req.lat, req.lon, req.accurate, req.report,
+                        request.client.host if request.client else "unknown")
+
+
+@app.post("/notes/delete")
+@rate_limit(PARSE_LIMIT)
+def notes_delete_endpoint(request: Request, req: NoteDeleteRequest):
+    """Privacy: delete a previously stored 'Anything else?' note from the NLP
+    training data. Matches on the exact text (case-insensitive)."""
+    return {"deleted_rows": delete_training_examples(req.text)}
 
 
 @app.post("/score", response_model=ScoreResponse)
@@ -193,7 +247,11 @@ def _merge_parsed(prefs: dict, parsed: dict) -> None:
 @app.post("/search", response_model=ScoreResponse)
 @rate_limit(SEARCH_LIMIT)
 def search(request: Request, req: CityScoreRequest):
-    """Find and rank REAL listings for any city (OSM + configured partner feeds)."""
+    """Find and rank REAL listings for any city (OSM + configured partner feeds).
+
+    Paginated: the full ranked list is computed once per request, but only the
+    asked-for page travels back (smaller payload, less rendering). `total`
+    tells the client how many matches exist."""
     require_human(request)
     # usage accounting: the fetch modules flip this flag on any real network
     # call; log_search() below then knows cache-hit vs live
@@ -201,6 +259,8 @@ def search(request: Request, req: CityScoreRequest):
 
     # everything downstream runs in THB; the user's budget may not
     budget_thb = to_thb(req.budget, req.currency)
+
+    page_size = req.page_size or req.top_n  # old clients keep top_n behaviour
 
     prefs = {
         "weights": {"cost": req.weights.cost, "location": req.weights.location,
@@ -219,6 +279,8 @@ def search(request: Request, req: CityScoreRequest):
         "value_of_time": req.value_of_time,
         "occupancy": req.occupancy,
         "top_n": req.top_n,
+        "page_size": page_size,
+        "lease_types": list(req.lease_types),
     }
 
     # NLP: notes + every "Other" free-text answer feed the same parser
@@ -227,16 +289,44 @@ def search(request: Request, req: CityScoreRequest):
     if parsed:
         _merge_parsed(prefs, parsed)
 
+    # training data only from the explicitly submitted note (deduplicated in
+    # record_note), never from previews — and only with the user's consent
+    if req.notes and req.notes.strip() and req.allow_training and not TRAINING_DISABLED:
+        record_note(req.notes)
+
     out = build_and_score(prefs, city=req.city,
                           radius_m=req.radius_m, max_listings=req.max_listings,
                           check_in=req.check_in, check_out=req.check_out)
+
+    full = out.get("results", [])
+    # optional semantic layer (GMI embeddings): blends vector similarity with
+    # the keyword ranking when the request carries free text; no-op otherwise
+    if free_text.strip():
+        full = semantic_rerank(full, free_text)
+
+    total = len(full)
+    total_pages = max(1, math.ceil(total / page_size)) if total else 0
+    page = min(req.page, total_pages) if total_pages else 1
+    start = (page - 1) * page_size
+    page_results = full[start:start + page_size]
+
+    # community accuracy aggregates + (optional) LLM "why it matches" lines,
+    # computed for the returned page only
+    attach_community(page_results)
+    if page_results and free_text.strip() and explain_enabled():
+        reasons = explain_listings(free_text, page_results)
+        for result in page_results:
+            if result.get("name") in reasons:
+                result["ai_reason"] = reasons[result["name"]]
+
     log_search(request.client.host if request.client else "unknown")
-    return {"count": out.get("count", 0), "results": out.get("results", []),
+    return {"count": len(page_results), "results": page_results,
             "note": out.get("error") or out.get("note"),
             "centre": out.get("centre"), "radius_used": out.get("radius_used"),
             "stay_months": out.get("stay_months"),
-            "rainy_season": out.get("rainy_season", False),
-            "parsed": parsed, "providers": out.get("providers", [])}
+            "parsed": parsed, "providers": out.get("providers", []),
+            "total": total, "page": page, "page_size": page_size,
+            "total_pages": total_pages}
 
 
 # --- founder admin (server-side ADMIN_TOKEN gate) -------------------------------
@@ -275,6 +365,7 @@ def admin_stats(request: Request):
     require_admin(request)
     stats = get_stats()
     stats["nlp_model"] = model_info()
+    stats["community_feedback"] = feedback_stats()
     return stats
 
 

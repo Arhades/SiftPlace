@@ -28,6 +28,37 @@ export const MODE_SHORT: Record<CommuteMode, string> = {
   walk: "Walk",
 };
 
+/**
+ * Re-express a result for another commute mode, CLIENT-SIDE, from the per-mode
+ * `fares` the backend already returned — flipping car/bike/transit/walk must
+ * not re-hit the backend (it burns an API call and a rate-limit slot for data
+ * we already have). Match score/subscores stay as ranked with the searched
+ * mode; the next real search re-ranks with the new mode.
+ */
+export function withMode(
+  r: ListingResult,
+  mode: CommuteMode,
+  valueOfTime = 0,
+): ListingResult {
+  const fare = r.fares[mode];
+  if (!fare) return r;
+  const timeCost = valueOfTime > 0 ? Math.round(fare.monthly_hours * valueOfTime) : null;
+  const trueCost =
+    r.price_known && r.rent != null ? r.rent + fare.monthly_fare_thb : null;
+  return {
+    ...r,
+    mode,
+    commute_min: fare.one_way_min,
+    one_way_fare: fare.one_way_thb,
+    monthly_fare: fare.monthly_fare_thb,
+    monthly_hours: fare.monthly_hours,
+    commute_cost: fare.monthly_fare_thb,
+    time_cost: timeCost,
+    true_cost: trueCost,
+    true_cost_incl_time: trueCost != null && timeCost != null ? trueCost + timeCost : null,
+  };
+}
+
 /** The natural alternative to show in the "vs …" comparison line. */
 export function otherMode(mode: CommuteMode): CommuteMode {
   const alternative: Record<CommuteMode, CommuteMode> = {

@@ -1,18 +1,28 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Search, MapPin, ArrowRight, Sparkles, Users, CalendarDays } from "lucide-react";
+import {
+  Search,
+  MapPin,
+  ArrowRight,
+  Sparkles,
+  Users,
+  CalendarDays,
+  ChevronDown,
+  FileText,
+} from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { parseNotes, type CommuteMode, type ParsedNotes, type Weights } from "@/lib/api";
 import { loadCities, searchCities, type CityEntry } from "@/lib/cities";
 import { CURRENCIES, SYMBOLS, fromTHB, toTHB } from "@/lib/currency";
 import {
   AMENITY_OPTIONS,
+  LEASE_OPTIONS,
   MAX_COMMUTE_OPTIONS,
   MODE_OPTIONS,
   NEARBY_OPTIONS,
   TYPE_OPTIONS,
   VIBE_OPTIONS,
 } from "@/lib/constants";
-import { cn } from "@/lib/utils";
+import { cn, staySpansRainySeason } from "@/lib/utils";
 import { ChipSelect } from "./ChipSelect";
 import { WeightSliders, WEIGHT_CAP } from "./WeightSliders";
 
@@ -34,6 +44,9 @@ export interface IntakeValues {
   vibe: string;
   types: string[];
   amenities: string[];
+  leaseTypes: string[];
+  /** Privacy: allow the note to be stored as (anonymous) NLP training data. */
+  allowTraining: boolean;
 }
 
 export function defaultIntake(): IntakeValues {
@@ -55,25 +68,12 @@ export function defaultIntake(): IntakeValues {
     vibe: "",
     types: ["condo", "hostel", "hotel"],
     amenities: ["wifi", "desk"],
+    leaseTypes: [],
+    allowTraining: true,
   };
 }
 
 const FEATURED_CITIES = ["Bangkok", "Tokyo", "Seoul", "Singapore"];
-
-/** Does any part of the stay fall in Bangkok's Sep–Oct rainy/flood window? */
-function staySpansRainySeason(checkIn: string, checkOut: string): boolean {
-  if (!checkIn || !checkOut) return false;
-  const a = new Date(checkIn);
-  const b = new Date(checkOut);
-  if (!(a < b)) return false;
-  const d = new Date(a);
-  while (d <= b) {
-    const m = d.getMonth() + 1;
-    if (m === 9 || m === 10) return true;
-    d.setMonth(d.getMonth() + 1, 1);
-  }
-  return false;
-}
 
 function stayMonths(checkIn: string, checkOut: string): number | null {
   if (!checkIn || !checkOut) return null;
@@ -93,6 +93,14 @@ export function Intake({
 }) {
   const [v, setV] = useState<IntakeValues>(initial);
   const update = (patch: Partial<IntakeValues>) => setV((p) => ({ ...p, ...patch }));
+
+  // The intake shows only the ESSENTIALS by default (budget, where you commute
+  // to, top priority, free-text) — everything else lives behind "More options".
+  // Auto-open it when the saved values already differ from the defaults there.
+  const [showMore, setShowMore] = useState(
+    Boolean(initial.checkIn || initial.valueOfTime > 0 || initial.occupancy > 1
+      || initial.leaseTypes.length > 0),
+  );
 
   // Budget is edited through a string draft so the field can be emptied while
   // retyping. Binding the number directly re-clamps "" to 1 on every keystroke,
@@ -193,26 +201,16 @@ export function Intake({
           SiftPlace filter
         </span>
         <h1 className="text-3xl font-bold tracking-tight text-ink">
-          Filter &amp; rank
+          Tell us the essentials
         </h1>
         <p className="mt-2 text-sm text-muted max-w-md mx-auto font-medium">
-          Set what matters and we re-rank every listing by its{" "}
-          <span className="text-ink font-bold">true monthly cost</span> — rent plus what your
-          commute actually costs in fares and time — not rent alone.
+          Budget, where you go daily, what matters — we rank every listing by its{" "}
+          <span className="text-ink font-bold">true monthly cost</span>. Anything else? Just
+          say it in your own words below, or chat with Sift.
         </p>
       </div>
 
-      {/* weights */}
-      <section className="sf-well p-5 mb-5">
-        <h2 className="text-base font-bold text-ink mb-1">What matters most?</h2>
-        <p className="text-xs text-muted mb-5 font-medium">
-          Spread up to {WEIGHT_CAP} points. More on one means less for the rest — that trade-off is
-          what matches you.
-        </p>
-        <WeightSliders weights={v.weights} onChange={(w) => update({ weights: w })} />
-      </section>
-
-      {/* practical */}
+      {/* essentials */}
       <section className="sf-well p-5 mb-5 space-y-5">
         {/* city */}
         <div ref={cityBoxRef} className="relative">
@@ -286,256 +284,46 @@ export function Intake({
           </p>
         </div>
 
-        {/* dates */}
+        {/* budget + currency */}
         <div>
-          <label className={labelCls}>
-            <CalendarDays className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-            When are you staying?
-          </label>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <input
-                type="date"
-                className={fieldCls}
-                value={v.checkIn}
-                min={todayIso}
-                aria-label="Check-in date"
-                onChange={(e) => update({ checkIn: e.target.value })}
-              />
-              <p className="mt-1 text-[10px] text-muted font-bold uppercase tracking-wide text-center">Check-in</p>
-            </div>
-            <div>
-              <input
-                type="date"
-                className={fieldCls}
-                value={v.checkOut}
-                min={v.checkIn || todayIso}
-                aria-label="Check-out date"
-                onChange={(e) => update({ checkOut: e.target.value })}
-              />
-              <p className="mt-1 text-[10px] text-muted font-bold uppercase tracking-wide text-center">Check-out</p>
-            </div>
-          </div>
-          {months != null && (
-            <p className="mt-1.5 text-[11px] text-muted font-medium">
-              ≈ <span className="font-bold text-ink">{months} months</span> — we'll prefer places
-              that take stays this long.
-            </p>
-          )}
-          {rainy && (
-            <p className="mt-1.5 text-[11px] font-semibold text-warn bg-warn-soft rounded-xl px-3 py-2">
-              🌧️ Your stay overlaps Sep–Oct — Bangkok's rainy / flood season. Check each area's
-              flood risk on the results.
-            </p>
-          )}
-        </div>
-
-        {/* budget + currency + occupancy */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Budget /month</label>
-            <div className="flex gap-2">
-              <input
-                type="number"
-                min={1}
-                step="any"
-                inputMode="numeric"
-                className={cn(fieldCls, "min-w-0")}
-                value={budgetText}
-                onChange={(e) => onBudgetType(e.target.value)}
-                onBlur={onBudgetBlur}
-              />
-              <select
-                aria-label="Budget currency"
-                className={cn(fieldCls, "w-auto shrink-0 px-3 cursor-pointer")}
-                value={v.currency}
-                onChange={(e) => changeCurrency(e.target.value)}
-              >
-                {CURRENCIES.map((c) => (
-                  <option key={c} value={c}>
-                    {SYMBOLS[c]} {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className={labelCls}>
-              <Users className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
-              People staying
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                aria-label="Fewer people"
-                onClick={() => update({ occupancy: Math.max(1, v.occupancy - 1) })}
-                className="h-11 w-11 shrink-0 rounded-full border-2 border-line bg-lowest text-ink font-bold text-lg hover:bg-surface-c cursor-pointer"
-              >
-                −
-              </button>
-              <span className="flex-1 text-center text-lg font-bold text-ink">{v.occupancy}</span>
-              <button
-                type="button"
-                aria-label="More people"
-                onClick={() => update({ occupancy: Math.min(8, v.occupancy + 1) })}
-                className="h-11 w-11 shrink-0 rounded-full border-2 border-line bg-lowest text-ink font-bold text-lg hover:bg-surface-c cursor-pointer"
-              >
-                +
-              </button>
-            </div>
-            {v.occupancy > 2 && (
-              <p className="mt-1 text-[11px] text-muted font-medium">
-                Groups of {v.occupancy} need real space — dorm-style places rank lower.
-              </p>
-            )}
-          </div>
-        </div>
-
-        {/* commute days */}
-        <div>
-          <label className={labelCls}>Days commuting /week</label>
-          <input
-            type="number"
-            min={0}
-            max={7}
-            className={fieldCls}
-            value={v.commuteDays}
-            onChange={(e) => update({ commuteDays: Math.max(0, Math.min(7, Number(e.target.value))) })}
-          />
-        </div>
-
-        {/* max commute */}
-        <div>
-          <label className={labelCls}>Longest commute you'd accept</label>
-          <div className="grid grid-cols-4 gap-2">
-            {MAX_COMMUTE_OPTIONS.map((o) => (
-              <button
-                key={o.value}
-                type="button"
-                onClick={() => update({ maxCommute: o.value })}
-                className={cn(
-                  "py-2 rounded-full text-xs font-bold border-2 transition cursor-pointer",
-                  v.maxCommute === o.value
-                    ? "bg-primary/25 border-primary-dim text-ink"
-                    : "bg-lowest border-line text-muted hover:bg-surface-c",
-                )}
-              >
-                {o.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* mode */}
-        <div>
-          <label className={labelCls}>How will you commute?</label>
-          <div className="grid grid-cols-2 gap-3">
-            {MODE_OPTIONS.map((m) => (
-              <button
-                key={m.value}
-                type="button"
-                onClick={() => update({ mode: m.value })}
-                className={cn(
-                  "flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition cursor-pointer",
-                  v.mode === m.value
-                    ? "bg-primary/20 border-primary-dim"
-                    : "bg-lowest border-line hover:bg-surface-c",
-                )}
-              >
-                <span className="text-2xl">{m.icon}</span>
-                <span className="min-w-0">
-                  <span className="block text-sm font-bold text-ink">{m.label}</span>
-                  <span className="block text-[11px] text-muted font-medium">{m.hint}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* value of time */}
-        <div>
-          <div className="flex items-center justify-between">
-            <label className="text-[11px] font-bold uppercase tracking-wider text-muted">
-              Value your time?{" "}
-              <span className="normal-case font-medium text-muted/70">(optional)</span>
-            </label>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={timeOn}
-              onClick={() => update({ valueOfTime: timeOn ? 0 : 150 })}
-              className={cn(
-                "relative h-6 w-11 rounded-full transition cursor-pointer",
-                timeOn ? "bg-primary-dim" : "bg-surface-high",
-              )}
+          <label className={labelCls}>Budget /month</label>
+          <div className="flex gap-2">
+            <input
+              type="number"
+              min={1}
+              step="any"
+              inputMode="numeric"
+              className={cn(fieldCls, "min-w-0")}
+              value={budgetText}
+              onChange={(e) => onBudgetType(e.target.value)}
+              onBlur={onBudgetBlur}
+            />
+            <select
+              aria-label="Budget currency"
+              className={cn(fieldCls, "w-auto shrink-0 px-3 cursor-pointer")}
+              value={v.currency}
+              onChange={(e) => changeCurrency(e.target.value)}
             >
-              <span
-                className={cn(
-                  "absolute top-0.5 h-5 w-5 rounded-full bg-lowest shadow transition-all",
-                  timeOn ? "left-[22px]" : "left-0.5",
-                )}
-              />
-            </button>
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {SYMBOLS[c]} {c}
+                </option>
+              ))}
+            </select>
           </div>
-          {timeOn && (
-            <div className="mt-2 flex items-center gap-2">
-              <span className="text-xs text-muted font-bold">฿</span>
-              <input
-                type="number"
-                min={0}
-                step={10}
-                className={cn(fieldCls, "max-w-28")}
-                value={v.valueOfTime}
-                onChange={(e) => update({ valueOfTime: Math.max(0, Number(e.target.value)) })}
-              />
-              <span className="text-xs text-muted font-medium">per hour of commuting</span>
-            </div>
-          )}
-          <p className="mt-1.5 text-[11px] text-muted font-medium">
-            We'll add a "true cost incl. time" so ranking weighs hours, not just baht.
+        </div>
+
+        {/* weights — the top priority */}
+        <div>
+          <label className={labelCls}>What matters most?</label>
+          <p className="text-xs text-muted mb-4 font-medium">
+            Spread up to {WEIGHT_CAP} points. More on one means less for the rest — that trade-off
+            is what matches you.
           </p>
-        </div>
-      </section>
-
-      {/* preferences */}
-      <section className="sf-well p-5 mb-5 space-y-5">
-        <div>
-          <label className={labelCls}>What do you want nearby?</label>
-          <ChipSelect
-            multiple
-            options={NEARBY_OPTIONS}
-            value={v.nearby}
-            onChange={(n) => update({ nearby: n })}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Street vibe</label>
-          <ChipSelect
-            options={VIBE_OPTIONS}
-            value={v.vibe}
-            onChange={(val) => update({ vibe: val })}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Place type</label>
-          <ChipSelect
-            multiple
-            options={TYPE_OPTIONS}
-            value={v.types}
-            onChange={(t) => update({ types: t })}
-          />
-        </div>
-        <div>
-          <label className={labelCls}>Must-have amenities</label>
-          <ChipSelect
-            multiple
-            options={AMENITY_OPTIONS}
-            value={v.amenities}
-            onChange={(a) => update({ amenities: a })}
-          />
+          <WeightSliders weights={v.weights} onChange={(w) => update({ weights: w })} />
         </div>
 
-        {/* free-text NLP */}
+        {/* free-text NLP — absorbs everything the form doesn't ask */}
         <div>
           <label className={labelCls}>
             <Sparkles className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
@@ -564,8 +352,272 @@ export function Intake({
               </div>
             </div>
           )}
+          <label className="mt-2 flex items-start gap-2 text-[11px] text-muted font-medium cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-0.5 cursor-pointer"
+              checked={v.allowTraining}
+              onChange={(e) => update({ allowTraining: e.target.checked })}
+            />
+            <span>
+              Let my note (anonymously) improve SiftPlace's suggestions. Untick to opt out —
+              nothing is stored.
+            </span>
+          </label>
         </div>
       </section>
+
+      {/* everything advanced lives behind one expander */}
+      <button
+        type="button"
+        onClick={() => setShowMore((s) => !s)}
+        className="w-full flex items-center justify-center gap-2 mb-5 px-4 py-3 rounded-full border-2 border-line bg-lowest text-sm font-bold text-muted hover:bg-surface-c transition cursor-pointer"
+      >
+        More options — dates, group size, commute, must-haves
+        <ChevronDown className={cn("h-4 w-4 transition-transform", showMore && "rotate-180")} />
+      </button>
+
+      {showMore && (
+        <>
+          <section className="sf-well p-5 mb-5 space-y-5 animate-sift-fade">
+            {/* dates */}
+            <div>
+              <label className={labelCls}>
+                <CalendarDays className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                When are you staying?
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <input
+                    type="date"
+                    className={fieldCls}
+                    value={v.checkIn}
+                    min={todayIso}
+                    aria-label="Check-in date"
+                    onChange={(e) => update({ checkIn: e.target.value })}
+                  />
+                  <p className="mt-1 text-[10px] text-muted font-bold uppercase tracking-wide text-center">Check-in</p>
+                </div>
+                <div>
+                  <input
+                    type="date"
+                    className={fieldCls}
+                    value={v.checkOut}
+                    min={v.checkIn || todayIso}
+                    aria-label="Check-out date"
+                    onChange={(e) => update({ checkOut: e.target.value })}
+                  />
+                  <p className="mt-1 text-[10px] text-muted font-bold uppercase tracking-wide text-center">Check-out</p>
+                </div>
+              </div>
+              {months != null && (
+                <p className="mt-1.5 text-[11px] text-muted font-medium">
+                  ≈ <span className="font-bold text-ink">{months} months</span> — we'll prefer places
+                  that take stays this long.
+                </p>
+              )}
+              {rainy && (
+                <p className="mt-1.5 text-[11px] font-semibold text-warn bg-warn-soft rounded-xl px-3 py-2">
+                  🌧️ Your stay overlaps Sep–Oct — Bangkok's rainy / flood season. Check each area's
+                  flood risk on the results.
+                </p>
+              )}
+            </div>
+
+            {/* occupancy + commute days */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>
+                  <Users className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                  People staying
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    aria-label="Fewer people"
+                    onClick={() => update({ occupancy: Math.max(1, v.occupancy - 1) })}
+                    className="h-11 w-11 shrink-0 rounded-full border-2 border-line bg-lowest text-ink font-bold text-lg hover:bg-surface-c cursor-pointer"
+                  >
+                    −
+                  </button>
+                  <span className="flex-1 text-center text-lg font-bold text-ink">{v.occupancy}</span>
+                  <button
+                    type="button"
+                    aria-label="More people"
+                    onClick={() => update({ occupancy: Math.min(8, v.occupancy + 1) })}
+                    className="h-11 w-11 shrink-0 rounded-full border-2 border-line bg-lowest text-ink font-bold text-lg hover:bg-surface-c cursor-pointer"
+                  >
+                    +
+                  </button>
+                </div>
+                {v.occupancy > 2 && (
+                  <p className="mt-1 text-[11px] text-muted font-medium">
+                    Groups of {v.occupancy} need real space — dorm-style places rank lower.
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className={labelCls}>Days commuting /week</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={7}
+                  className={fieldCls}
+                  value={v.commuteDays}
+                  onChange={(e) => update({ commuteDays: Math.max(0, Math.min(7, Number(e.target.value))) })}
+                />
+              </div>
+            </div>
+
+            {/* max commute */}
+            <div>
+              <label className={labelCls}>Longest commute you'd accept</label>
+              <div className="grid grid-cols-4 gap-2">
+                {MAX_COMMUTE_OPTIONS.map((o) => (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => update({ maxCommute: o.value })}
+                    className={cn(
+                      "py-2 rounded-full text-xs font-bold border-2 transition cursor-pointer",
+                      v.maxCommute === o.value
+                        ? "bg-primary/25 border-primary-dim text-ink"
+                        : "bg-lowest border-line text-muted hover:bg-surface-c",
+                    )}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* mode */}
+            <div>
+              <label className={labelCls}>How will you commute?</label>
+              <div className="grid grid-cols-2 gap-3">
+                {MODE_OPTIONS.map((m) => (
+                  <button
+                    key={m.value}
+                    type="button"
+                    onClick={() => update({ mode: m.value })}
+                    className={cn(
+                      "flex items-center gap-3 p-3 rounded-2xl border-2 text-left transition cursor-pointer",
+                      v.mode === m.value
+                        ? "bg-primary/20 border-primary-dim"
+                        : "bg-lowest border-line hover:bg-surface-c",
+                    )}
+                  >
+                    <span className="text-2xl">{m.icon}</span>
+                    <span className="min-w-0">
+                      <span className="block text-sm font-bold text-ink">{m.label}</span>
+                      <span className="block text-[11px] text-muted font-medium">{m.hint}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* value of time */}
+            <div>
+              <div className="flex items-center justify-between">
+                <label className="text-[11px] font-bold uppercase tracking-wider text-muted">
+                  Value your time?{" "}
+                  <span className="normal-case font-medium text-muted/70">(optional)</span>
+                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={timeOn}
+                  onClick={() => update({ valueOfTime: timeOn ? 0 : 150 })}
+                  className={cn(
+                    "relative h-6 w-11 rounded-full transition cursor-pointer",
+                    timeOn ? "bg-primary-dim" : "bg-surface-high",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 h-5 w-5 rounded-full bg-lowest shadow transition-all",
+                      timeOn ? "left-[22px]" : "left-0.5",
+                    )}
+                  />
+                </button>
+              </div>
+              {timeOn && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-muted font-bold">฿</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={10}
+                    className={cn(fieldCls, "max-w-28")}
+                    value={v.valueOfTime}
+                    onChange={(e) => update({ valueOfTime: Math.max(0, Number(e.target.value)) })}
+                  />
+                  <span className="text-xs text-muted font-medium">per hour of commuting</span>
+                </div>
+              )}
+              <p className="mt-1.5 text-[11px] text-muted font-medium">
+                We'll add a "true cost incl. time" so ranking weighs hours, not just baht.
+              </p>
+            </div>
+          </section>
+
+          <section className="sf-well p-5 mb-5 space-y-5 animate-sift-fade">
+            <div>
+              <label className={labelCls}>What do you want nearby?</label>
+              <ChipSelect
+                multiple
+                options={NEARBY_OPTIONS}
+                value={v.nearby}
+                onChange={(n) => update({ nearby: n })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Street vibe</label>
+              <ChipSelect
+                options={VIBE_OPTIONS}
+                value={v.vibe}
+                onChange={(val) => update({ vibe: val })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Place type</label>
+              <ChipSelect
+                multiple
+                options={TYPE_OPTIONS}
+                value={v.types}
+                onChange={(t) => update({ types: t })}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>
+                <FileText className="inline h-3.5 w-3.5 mr-1 -mt-0.5" />
+                Lease length
+              </label>
+              <ChipSelect
+                multiple
+                options={LEASE_OPTIONS}
+                value={v.leaseTypes}
+                onChange={(l) => update({ leaseTypes: l })}
+              />
+              <p className="mt-1.5 text-[11px] text-muted font-medium">
+                Pick none to see everything. Places with unknown terms still show — always confirm
+                lease length <span className="font-bold text-ink">and visa requirements</span> with
+                the landlord.
+              </p>
+            </div>
+            <div>
+              <label className={labelCls}>Must-have amenities</label>
+              <ChipSelect
+                multiple
+                options={AMENITY_OPTIONS}
+                value={v.amenities}
+                onChange={(a) => update({ amenities: a })}
+              />
+            </div>
+          </section>
+        </>
+      )}
 
       <button
         type="submit"

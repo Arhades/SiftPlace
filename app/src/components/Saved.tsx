@@ -53,7 +53,7 @@ export function Saved({
       </div>
 
       {showTable ? (
-        <CompareTable items={items} />
+        <CompareTable items={items} currency={currency} />
       ) : (
         <div className="space-y-4">
           {items.map((r, i) => (

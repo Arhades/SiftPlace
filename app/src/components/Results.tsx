@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { CommuteMode, FloodRisk, ListingResult, ParsedNotes } from "@/lib/api";
 import { MODE_OPTIONS } from "@/lib/constants";
 import { SYMBOLS } from "@/lib/currency";
@@ -17,6 +18,8 @@ export interface ResultsContext {
   stayMonths: number | null;
   radiusUsed: number | null;
   parsed: ParsedNotes | null;
+  /** True while showing the curated zero-API starter picks. */
+  featured: boolean;
 }
 
 export function Results({
@@ -29,6 +32,10 @@ export function Results({
   onToggleSave,
   onChangeMode,
   geoFailedMsg,
+  page,
+  totalPages,
+  total,
+  onPage,
 }: {
   results: ListingResult[];
   note: string | null;
@@ -39,11 +46,17 @@ export function Results({
   onToggleSave: (listing: ListingResult) => void;
   onChangeMode: (m: CommuteMode) => void;
   geoFailedMsg: string | null;
+  page: number;
+  totalPages: number;
+  total: number;
+  onPage: (p: number) => void;
 }) {
   const tradeOff = computeTradeOff(results, context.commuteDays);
-  const title = context.dest
-    ? `Listings near ${context.dest}`
-    : `Top listings in ${context.city || "your city"}`;
+  const title = context.featured
+    ? "Popular with students in Bangkok"
+    : context.dest
+      ? `Listings near ${context.dest}`
+      : `Top listings in ${context.city || "your city"}`;
   // budget is already in the user's currency — just prefix its symbol
   const budgetLabel =
     (SYMBOLS[context.currency] ?? context.currency) + context.budget.toLocaleString("en-US");
@@ -54,10 +67,14 @@ export function Results({
       <div>
         <h2 className="text-xl font-bold text-ink">{title}</h2>
         <p className="mt-0.5 text-sm text-muted font-medium">
-          <span className="font-bold text-ink">{results.length}</span>{" "}
-          place{results.length === 1 ? "" : "s"} · ranked by true monthly cost · within{" "}
-          <span className="font-bold text-ink">{budgetLabel}</span>
-          /mo
+          <span className="font-bold text-ink">{total}</span>{" "}
+          place{total === 1 ? "" : "s"} · ranked by true monthly cost
+          {!context.featured && (
+            <>
+              {" "}
+              · within <span className="font-bold text-ink">{budgetLabel}</span>/mo
+            </>
+          )}
           {context.stayMonths != null && (
             <>
               {" "}
@@ -87,7 +104,8 @@ export function Results({
         )}
       </div>
 
-      {/* commute mode toggle (re-runs the search for consistent scores) */}
+      {/* commute mode toggle — swaps client-side from the fares each result
+          already carries; no backend call */}
       <div className="flex items-center gap-2">
         <span className="text-[11px] uppercase tracking-wider text-muted font-bold">
           Commute by
@@ -116,18 +134,44 @@ export function Results({
         <TradeOffCallout data={tradeOff} mode={mode} commuteDays={context.commuteDays} />
       )}
 
-      <div className="space-y-4">
+      {/* the 3×2 grid: 3 columns on desktop, 2 on tablets, 1 on phones */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
         {results.map((r, i) => (
           <ResultCard
             key={r.name + i}
             r={r}
-            isTop={i === 0}
+            isTop={page === 1 && i === 0}
             saved={savedNames.has(r.name)}
             currency={context.currency}
             onToggleSave={onToggleSave}
           />
         ))}
       </div>
+
+      {/* pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => onPage(page - 1)}
+            disabled={page <= 1}
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-full border-2 border-line bg-lowest text-xs font-bold text-ink hover:bg-surface-c transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" /> Previous
+          </button>
+          <span className="text-xs font-bold text-muted">
+            Page <span className="text-ink">{page}</span> of {totalPages}
+          </span>
+          <button
+            type="button"
+            onClick={() => onPage(page + 1)}
+            disabled={page >= totalPages}
+            className="inline-flex items-center gap-1 px-4 py-2 rounded-full border-2 border-line bg-lowest text-xs font-bold text-ink hover:bg-surface-c transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Next <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      )}
 
       {note && (
         <div className="rounded-2xl border border-line bg-surface-low p-4 text-xs text-muted leading-relaxed font-medium">

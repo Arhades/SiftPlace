@@ -38,6 +38,13 @@ export interface SearchRequest {
   radius_m: number;
   max_listings: number;
   top_n: number;
+  /** Pagination: which page of ranked results to return (1-based). */
+  page: number;
+  page_size: number;
+  /** Lease-length filter: standard | short_term | monthly (empty = any). */
+  lease_types: string[];
+  /** Privacy: allow the submitted note to be stored as NLP training data. */
+  allow_training: boolean;
 }
 
 /** One mode's fare summary (from backend fare.py). */
@@ -70,6 +77,25 @@ export interface Offer {
 
 export type Badge = "top_match" | "best_value" | "best_quality";
 
+/** "What else you'll spend" — rough per-person monthly extras (THB). */
+export interface CostOfLiving {
+  utilities: number | null;
+  internet: number | null;
+  mobile: number | null;
+  food: number | null;
+  total: number | null;
+  note: string;
+  source: string;
+}
+
+/** Community accuracy feedback aggregate for a listing. */
+export interface Community {
+  up: number;
+  down: number;
+  /** 3+ negatives (and more downs than ups) — shown as a caution chip. */
+  flagged: boolean;
+}
+
 /** Mirrors backend ListingResult. */
 export interface ListingResult {
   name: string;
@@ -100,6 +126,13 @@ export interface ListingResult {
   sources: string[];
   stars: number | null;
   badge: Badge | null;
+  /** Lease length when known: standard | short_term | monthly (null = confirm). */
+  lease_type: string | null;
+  cost_of_living: CostOfLiving | null;
+  community: Community | null;
+  /** Semantic layer (when the backend has it enabled). */
+  semantic: number | null;
+  ai_reason: string | null;
 }
 
 /** What the NLP layer extracted from free text (shown back to the user). */
@@ -123,9 +156,25 @@ export interface SearchResponse {
   centre: [number, number] | null;
   radius_used: number | null;
   stay_months: number | null;
-  rainy_season: boolean;
   parsed: ParsedNotes | null;
   providers: string[];
+  /** Pagination: `results` holds one page; `total` counts every ranked match. */
+  total: number | null;
+  page: number | null;
+  page_size: number | null;
+  total_pages: number | null;
+}
+
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface ChatResponse {
+  reply: string;
+  parsed: ParsedNotes;
+  /** Which engine answered: agnes | openai | rules-fallback(...) */
+  engine: string;
 }
 
 export interface GeocodeResult {
@@ -228,6 +277,43 @@ export function parseNotes(text: string, signal?: AbortSignal): Promise<ParsedNo
 
 export function getRates(): Promise<RatesResponse> {
   return request(`/rates`);
+}
+
+/** One Sift-mascot turn: reply + demands extracted server-side (Agnes AI ->
+ *  OpenAI -> offline rules — same shape whichever engine answered). */
+export function chat(
+  messages: ChatMessage[],
+  filtersSummary?: string,
+  signal?: AbortSignal,
+): Promise<ChatResponse> {
+  return request(`/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ messages, filters_summary: filtersSummary ?? null }),
+    signal,
+  });
+}
+
+/** Community accuracy vote / scam report; returns the fresh aggregate. */
+export function sendFeedback(
+  listing: { name: string; lat: number; lon: number },
+  accurate: boolean,
+  report?: string,
+): Promise<{ ok: boolean; community: Community }> {
+  return request(`/feedback`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ...listing, accurate, report: report ?? null }),
+  });
+}
+
+/** Privacy: remove a previously stored "Anything else?" note from training data. */
+export function deleteStoredNote(text: string): Promise<{ deleted_rows: number }> {
+  return request(`/notes/delete`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text }),
+  });
 }
 
 export function getFloodRisk(lat: number, lon: number, signal?: AbortSignal): Promise<FloodRisk> {

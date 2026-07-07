@@ -1,5 +1,7 @@
-import { MapPin, Clock, Heart, Map as MapIcon } from "lucide-react";
-import type { Badge, ListingResult } from "@/lib/api";
+import { useState } from "react";
+import { MapPin, Clock, Heart, Map as MapIcon, ChevronDown, Wallet } from "lucide-react";
+import type { Badge, Community, ListingResult } from "@/lib/api";
+import { sendFeedback } from "@/lib/api";
 import { fmtMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +28,12 @@ const BADGE_META: Record<Badge, { label: string; cls: string } | null> = {
   best_quality: { label: "✨ Best quality", cls: "bg-secondary/20 text-secondary-dim" },
 };
 
+const LEASE_LABEL: Record<string, string> = {
+  standard: "📜 12-mo lease",
+  short_term: "🗓️ 3–6 mo lease",
+  monthly: "🔄 monthly rolling",
+};
+
 const SUBSCORE_META: { key: "cost" | "location" | "living"; label: string }[] = [
   { key: "cost", label: "Cost" },
   { key: "location", label: "Location" },
@@ -50,6 +58,34 @@ export function ResultCard({
   const otherFare = r.fares[other];
   const level = commuteLevel(r.monthly_fare);
   const meta = [r.area, r.type].filter(Boolean).join(" · ");
+
+  const [colOpen, setColOpen] = useState(false);
+  const col = r.cost_of_living;
+
+  // community accuracy feedback (one vote per visitor per listing, server-side)
+  const [community, setCommunity] = useState<Community | null>(r.community);
+  const [voted, setVoted] = useState<"up" | "down" | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [report, setReport] = useState("");
+  const canVote = r.lat != null && r.lon != null && r.source !== "featured";
+
+  const vote = (accurate: boolean) => {
+    if (r.lat == null || r.lon == null) return;
+    setVoted(accurate ? "up" : "down");
+    setReportOpen(!accurate);
+    sendFeedback({ name: r.name, lat: r.lat, lon: r.lon }, accurate)
+      .then((res) => setCommunity(res.community))
+      .catch(() => {});
+  };
+
+  const submitReport = () => {
+    if (r.lat == null || r.lon == null || !report.trim()) return;
+    sendFeedback({ name: r.name, lat: r.lat, lon: r.lon }, false, report.trim())
+      .then((res) => setCommunity(res.community))
+      .catch(() => {});
+    setReportOpen(false);
+    setReport("");
+  };
 
   return (
     <article
@@ -85,6 +121,11 @@ export function ResultCard({
               {BADGE_META[r.badge]!.label}
             </span>
           )}
+          {community?.flagged && (
+            <span className="px-2.5 py-1 rounded-full bg-error-soft text-error text-[11px] font-bold">
+              ⚠️ Accuracy under review
+            </span>
+          )}
         </div>
         <button
           type="button"
@@ -117,6 +158,13 @@ export function ResultCard({
           {meta ? " · " : ""}~{r.commute_min} min each way
         </span>
       </div>
+
+      {/* semantic layer's "why this matches", in the student's own terms */}
+      {r.ai_reason && (
+        <p className="mt-2 text-xs text-secondary-dim font-semibold italic leading-relaxed">
+          🤖 {r.ai_reason}
+        </p>
+      )}
 
       {/* true cost block — the headline */}
       <div className="mt-4 rounded-2xl bg-surface-low border border-line p-4">
@@ -183,6 +231,36 @@ export function ResultCard({
         )}
       </div>
 
+      {/* what else you'll spend — rough per-person monthly extras */}
+      {col && col.total != null && (
+        <div className="mt-3 rounded-2xl border border-line bg-lowest">
+          <button
+            type="button"
+            onClick={() => setColOpen((o) => !o)}
+            className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer"
+          >
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-muted">
+              <Wallet className="h-3.5 w-3.5" /> What else you'll spend
+            </span>
+            <span className="inline-flex items-center gap-1 text-xs font-bold text-ink">
+              ~{fmtMoney(col.total, currency)}/mo
+              <ChevronDown className={cn("h-3.5 w-3.5 text-muted transition-transform", colOpen && "rotate-180")} />
+            </span>
+          </button>
+          {colOpen && (
+            <div className="px-4 pb-3 text-xs text-muted font-medium space-y-1">
+              <div className="flex justify-between"><span>Utilities (electricity, water)</span><span className="text-ink font-bold">~{fmtMoney(col.utilities, currency)}</span></div>
+              <div className="flex justify-between"><span>Internet</span><span className="text-ink font-bold">~{fmtMoney(col.internet, currency)}</span></div>
+              <div className="flex justify-between"><span>Mobile plan</span><span className="text-ink font-bold">~{fmtMoney(col.mobile, currency)}</span></div>
+              <div className="flex justify-between"><span>Food (cooking + street food)</span><span className="text-ink font-bold">~{fmtMoney(col.food, currency)}</span></div>
+              <p className="pt-1 text-[10px] text-muted/70">
+                {col.note} · {col.source}
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* multi-provider price comparison (affiliate Book buttons) */}
       <PriceCompare offers={r.offers ?? []} currency={currency} />
 
@@ -191,6 +269,11 @@ export function ResultCard({
         {r.vibe && (
           <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-c text-ink">
             {r.vibe === "quiet" ? "🌿 quiet" : "✨ lively"}
+          </span>
+        )}
+        {r.lease_type && LEASE_LABEL[r.lease_type] && (
+          <span className="text-[11px] font-bold px-2.5 py-1 rounded-full bg-surface-c text-ink">
+            {LEASE_LABEL[r.lease_type]}
           </span>
         )}
         {r.met_nearby.map((m) => (
@@ -242,15 +325,71 @@ export function ResultCard({
         </p>
       )}
 
-      {/* map link */}
-      <a
-        href={osmLink(r.lat, r.lon)}
-        target="_blank"
-        rel="noopener noreferrer"
-        className="mt-4 inline-flex items-center gap-1.5 text-xs font-bold text-secondary-dim hover:text-secondary"
-      >
-        <MapIcon className="h-3.5 w-3.5" /> View on map
-      </a>
+      {/* footer: map link + community accuracy feedback */}
+      <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
+        <a
+          href={osmLink(r.lat, r.lon)}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-1.5 text-xs font-bold text-secondary-dim hover:text-secondary"
+        >
+          <MapIcon className="h-3.5 w-3.5" /> View on map
+        </a>
+        {canVote && (
+          <div className="flex items-center gap-1.5 text-[11px] text-muted font-medium">
+            <span>Accurate?</span>
+            <button
+              type="button"
+              aria-label="Listing was accurate"
+              onClick={() => vote(true)}
+              disabled={voted !== null}
+              className={cn(
+                "px-2 py-1 rounded-full border transition cursor-pointer disabled:cursor-default",
+                voted === "up" ? "bg-ok-soft border-ok/40 text-ok font-bold" : "border-line hover:bg-surface-c",
+              )}
+            >
+              👍{community && community.up > 0 ? ` ${community.up}` : ""}
+            </button>
+            <button
+              type="button"
+              aria-label="Listing was inaccurate"
+              onClick={() => vote(false)}
+              disabled={voted !== null}
+              className={cn(
+                "px-2 py-1 rounded-full border transition cursor-pointer disabled:cursor-default",
+                voted === "down" ? "bg-error-soft border-error/40 text-error font-bold" : "border-line hover:bg-surface-c",
+              )}
+            >
+              👎{community && community.down > 0 ? ` ${community.down}` : ""}
+            </button>
+          </div>
+        )}
+      </div>
+      {reportOpen && (
+        <div className="mt-2 flex items-center gap-2">
+          <input
+            className="sf-field flex-1 min-w-0 text-xs"
+            placeholder="What was wrong? (optional — helps us catch scams)"
+            value={report}
+            maxLength={500}
+            onChange={(e) => setReport(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                submitReport();
+              }
+            }}
+          />
+          <button
+            type="button"
+            onClick={submitReport}
+            disabled={!report.trim()}
+            className="px-3 py-2 rounded-full border-2 border-line text-[11px] font-bold text-muted hover:bg-surface-c cursor-pointer disabled:opacity-40"
+          >
+            Send
+          </button>
+        </div>
+      )}
     </article>
   );
 }

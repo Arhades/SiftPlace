@@ -7,8 +7,9 @@ not a black box.
 
 Listings may be fully-specified (mock/demo data) OR partial (real OpenStreetMap
 data has names, coordinates and nearby distances, but NO price, amenities, or
-reviews). Missing fields fall back to neutral scores so real places still rank,
-and a `price_known` flag tells the UI what's estimated.
+reviews). Missing fields fall back to a consistent mild penalty (UNKNOWN_SCORE)
+so real places still rank without ever beating better-documented ones, and a
+`price_known` flag tells the UI what's estimated.
 """
 from __future__ import annotations
 
@@ -56,6 +57,12 @@ GROUP_SIZE_THRESHOLD = 2
 # Listings whose minimum stay exceeds the user's stay get this multiplier.
 STAY_MISMATCH_TOL = 0.7
 
+# Missing/unknown data (no price, no amenity list, no POI of a wanted kind in
+# the area) scores this — a consistent MILD penalty just under the 0.5 neutral,
+# so a listing we know nothing about can never outrank one with real-but-
+# imperfect data, yet is never punished harder than stating no preference.
+UNKNOWN_SCORE = 0.45
+
 
 # --- helpers -----------------------------------------------------------------
 
@@ -87,10 +94,11 @@ def _cost_score(budget_basis: float | None, budget: float) -> float:
     """How affordable the true monthly cost is against the budget.
 
     Full marks at <=80% of budget, floor of 0.1 at >=120%, linear in between.
-    Unknown price (OSM listings) scores a neutral 0.5 so real places still rank.
+    Unknown price (OSM listings) takes the mild UNKNOWN_SCORE penalty so real
+    places still rank but never beat a listing with an actual price.
     """
     if budget_basis is None:
-        return 0.5
+        return UNKNOWN_SCORE
     ratio = budget_basis / max(budget, 1)
     if ratio <= 0.8:
         return 1.0
@@ -103,8 +111,12 @@ def _location_score(listing: dict, prefs: dict) -> float:
     """Nearby wants (70%) + street safety (20%) + quiet/lively match (10%)."""
     wants = prefs.get("nearby", [])
     nearby = listing.get("nearby", {})
-    # score each wanted POI kind by distance; no wants -> neutral 0.5
-    want_scores = [distance_score(nearby.get(want, 99999)) for want in wants] or [0.5]
+    # score each wanted POI kind by real distance; no wants -> neutral 0.5.
+    # A want with NO POI of that kind anywhere in the area is unfulfillable
+    # data, not a bad listing — mild UNKNOWN_SCORE, never worse than having
+    # stated no preference at all.
+    want_scores = [distance_score(nearby[want]) if want in nearby else UNKNOWN_SCORE
+                   for want in wants] or [0.5]
 
     street = listing.get("street", {}) or {}
     safety = street.get("safety", 3)          # 1-5, unknown -> average
@@ -121,15 +133,16 @@ def _location_score(listing: dict, prefs: dict) -> float:
 def _living_score(listing: dict, prefs: dict, occupancy: int) -> float:
     """Amenities matched + place type + space (occupancy-aware) + a quality
     signal (stars/guest rating) when an affiliate source has one."""
-    # amenities: None means "unknown" (OSM data) -> neutral
+    # amenities: None means "unknown" (OSM data) -> mild penalty; when the user
+    # requested none, amenities can't discriminate -> neutral for everyone
     requested = prefs.get("amenities", [])
     amenities = listing.get("amenities")
-    if amenities is None:
-        amenity_score = 0.6
-    elif requested:
-        amenity_score = sum(1 for a in requested if a in amenities) / len(requested)
+    if not requested:
+        amenity_score = 0.5
+    elif amenities is None:
+        amenity_score = UNKNOWN_SCORE
     else:
-        amenity_score = 0.6
+        amenity_score = sum(1 for a in requested if a in amenities) / len(requested)
 
     # place type: full marks when it's one the user asked for. When the user
     # didn't restrict types, the listing's own type is the default -> full marks.
@@ -145,7 +158,9 @@ def _living_score(listing: dict, prefs: dict, occupancy: int) -> float:
     if space:
         space_score = clamp(space / needed_sqm)
     else:
-        space_score = 0.5 if occupancy <= 2 else 0.4
+        # unknown floor area: mild penalty, a bit harsher for groups who
+        # genuinely need the space to exist
+        space_score = UNKNOWN_SCORE if occupancy <= 2 else 0.4
 
     # quality: hotel stars (out of 5) or guest rating (out of 10) when known
     stars = listing.get("stars")
@@ -181,7 +196,7 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
     """Score one listing against the user's preferences; return a full breakdown.
 
     Tolerant of missing fields: unknown price/amenities/space/vibe fall back to
-    neutral scores so real (OSM) listings still rank fairly.
+    the mild UNKNOWN_SCORE penalty so real (OSM) listings still rank fairly.
     """
     # 1) commute time + fare for EVERY mode (transparent fare model in fare.py),
     #    then pick the user's chosen mode for ranking. Returning them all lets
@@ -275,6 +290,8 @@ def score_listing(listing: dict[str, Any], prefs: dict[str, Any]) -> dict[str, A
         "sources": listing.get("sources", []),
         "stars": listing.get("stars"),
         "badge": None,
+        "lease_type": listing.get("lease_type"),
+        "cost_of_living": listing.get("cost_of_living"),
     }
 
 

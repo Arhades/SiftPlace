@@ -663,18 +663,21 @@ function applyTheme(dark){
 applyTheme(!!(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches));
 if(themeBtn) themeBtn.onclick=()=>applyTheme(document.documentElement.dataset.theme!=='dark');
 
-/* =============================== GEOCODING (free, OpenStreetMap Nominatim) =============================== */
-// Turns a typed place ("Imperial College London") into coordinates, right in the browser.
-// For production this should move to the FastAPI backend so you can cache results and
-// respect Nominatim's usage policy (max ~1 request/second).
+/* =============================== GEOCODING (via the SiftPlace backend) =============================== */
+// Turns a typed place ("Imperial College London") into coordinates through the
+// backend's /geocode proxy — NOT by calling Nominatim from the browser. The
+// backend sends the required User-Agent, self-throttles to Nominatim's
+// 1 req/sec policy, caches results, and falls over to Photon; hitting
+// Nominatim straight from visitors' browsers violates its ToS and risks a ban.
+// Point SIFT_API at your deployed backend (window.SIFT_API overrides).
+const SIFT_API=(window.SIFT_API||"http://localhost:8000").replace(/\/+$/,"");
 async function geocode(query){
   try{
-    const url="https://nominatim.openstreetmap.org/search?format=json&limit=1&q="+encodeURIComponent(query);
-    const r=await fetch(url,{headers:{'Accept':'application/json'}});
+    const r=await fetch(SIFT_API+"/geocode?q="+encodeURIComponent(query),{headers:{'Accept':'application/json'}});
     if(!r.ok) return null;
     const d=await r.json();
-    if(!d.length) return null;
-    return {lat:+d[0].lat, lon:+d[0].lon, label:d[0].display_name};
+    if(!d.found) return null;
+    return {lat:+d.lat, lon:+d.lon, label:d.label||""};
   }catch(e){ return null; }
 }
 
