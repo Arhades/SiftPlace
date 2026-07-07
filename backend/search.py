@@ -18,11 +18,17 @@ from __future__ import annotations
 
 import datetime as dt
 
+from col import estimate as col_estimate
 from geocode import geocode
 from osm import fetch_pois, nearest, TAGS
 from providers import gather_listings
 from providers.base import SearchParams
 from scoring import rank_listings
+
+# Lease length by place kind, when the source doesn't say. Hotels/hostels are
+# bookable month-to-month through the affiliate feeds ("monthly rolling");
+# condos' lease terms are landlord-specific -> unknown (confirm with landlord).
+LEASE_BY_TYPE = {"hotel": "monthly", "hostel": "monthly"}
 
 # --- adaptive radius (tune here) ----------------------------------------------
 # Widen when cost dominates (hunt cheaper options further out) and when location
@@ -33,8 +39,6 @@ COST_DRIVEN_SHARE = 0.45
 LOCATION_FLEXIBLE_SHARE = 0.25
 LOCATION_PRIORITY_SHARE = 0.50
 WIDEN_FACTOR = 0.7  # each trigger adds +70% of the base radius
-
-RAINY_MONTHS = (9, 10)  # Bangkok flood window (Sep-Oct)
 
 
 def adaptive_radius(base_m: int, weights: dict) -> int:
@@ -51,34 +55,30 @@ def adaptive_radius(base_m: int, weights: dict) -> int:
     return min(int(base_m * factor), RADIUS_HARD_CAP_M)
 
 
-def stay_meta(check_in: dt.date | None, check_out: dt.date | None) -> tuple[float | None, bool]:
-    """(stay length in months, does the stay overlap the Sep-Oct flood window)."""
+def stay_months_of(check_in: dt.date | None, check_out: dt.date | None) -> float | None:
+    """Stay length in months, or None without valid dates. Seasonal rain/flood
+    assessment is flood.py's job alone (/flood-risk) — no duplicate boolean here."""
     if not check_in or not check_out or check_out <= check_in:
-        return None, dt.date.today().month in RAINY_MONTHS
-    months = round((check_out - check_in).days / 30.4, 1)
-    d = check_in
-    while d <= check_out:
-        if d.month in RAINY_MONTHS:
-            return months, True
-        # jump to the 1st of the next month
-        d = (d.replace(day=1) + dt.timedelta(days=32)).replace(day=1)
-    return months, False
+        return None
+    return round((check_out - check_in).days / 30.4, 1)
 
 
-def apply_spread(results: list[dict], top_n: int) -> list[dict]:
-    """Return top_n results guaranteed to include the trade-off picks.
+def apply_spread(results: list[dict], window: int) -> list[dict]:
+    """Reorder so the first `window` results (page 1) include the trade-off picks.
 
     - top_match:    the highest weighted score (rank 1)
     - best_value:   cheapest true monthly cost among priced places (the
                     "cheaper further out" candidate)
     - best_quality: strongest living sub-score / stars (the "worth paying for"
                     candidate)
-    If a pick sits outside the top_n it replaces the tail so the user always
-    sees the real spread, not a wall of near-identical compromises.
+    If a pick sits outside the window it replaces the window's tail so the
+    first page always shows the real spread, not a wall of near-identical
+    compromises. Returns the FULL list — displaced results drop back into the
+    remainder, so pagination slices it without losing anyone.
     """
     if not results:
         return results
-    top = results[: top_n]
+    top = results[: window]
 
     priced = [result for result in results
               if result["price_known"] and result.get("true_cost") is not None]
@@ -105,7 +105,9 @@ def apply_spread(results: list[dict], top_n: int) -> list[dict]:
     if (best_quality is not None and best_quality in top
             and best_quality is not top[0] and best_quality.get("badge") is None):
         best_quality["badge"] = "best_quality"
-    return top
+
+    in_window = {id(result) for result in top}
+    return top + [result for result in results if id(result) not in in_window]
 
 
 def build_and_score(prefs: dict, city: str | None = None,
@@ -128,8 +130,8 @@ def build_and_score(prefs: dict, city: str | None = None,
     # 2) widen the search when the weight profile says distance is negotiable
     radius_used = adaptive_radius(radius_m, prefs.get("weights", {}))
 
-    # stay metadata (feeds scoring + the rainy-season flag in the response)
-    stay_months, rainy = stay_meta(check_in, check_out)
+    # stay metadata (feeds the min-stay tolerance in scoring)
+    stay_months = stay_months_of(check_in, check_out)
     prefs["stay_months"] = stay_months
 
     # 3) listings from every configured source, merged + de-duplicated
@@ -141,14 +143,22 @@ def build_and_score(prefs: dict, city: str | None = None,
         return {"error": "No lodging found near that location.",
                 "results": [], "count": 0, "centre": list(centre),
                 "radius_used": radius_used, "providers": providers,
-                "stay_months": stay_months, "rainy_season": rainy}
+                "stay_months": stay_months}
 
     # 4) real nearby POIs for the wanted kinds (one query per kind over the area)
     wanted = [k for k in prefs.get("nearby", []) if k in TAGS]
     poi_map = fetch_pois(centre[0], centre[1], wanted, radius_used + 1000) if wanted else {}
 
+    # lease-type filter: exclude only listings whose KNOWN lease type conflicts
+    # with the user's ask; unknown terms pass (the UI says "confirm with landlord")
+    wanted_leases = set(prefs.get("lease_types") or [])
+    occupancy = max(1, prefs.get("occupancy", 1) or 1)
+
     listings = []
     for place in merged:
+        lease = place.get("lease_type") or LEASE_BY_TYPE.get(place["type"])
+        if wanted_leases and lease is not None and lease not in wanted_leases:
+            continue
         # metres from this place to the nearest POI of each wanted kind
         nearby_distances = {}
         for kind in wanted:
@@ -166,12 +176,23 @@ def build_and_score(prefs: dict, city: str | None = None,
             "stars": place.get("stars"), "rating": place.get("rating"),
             "capacity": place.get("capacity"),
             "min_stay_months": place.get("min_stay_months"),
+            "lease_type": lease,
+            # "what else you'll spend": rough per-person monthly extras
+            "cost_of_living": col_estimate(city, None, occupancy),
         })
 
-    # 5) score everything, then guarantee a spread of picks in the top N
-    top_n = prefs.get("top_n", 5)
+    if not listings:
+        return {"error": "No listings match that lease type here — try allowing "
+                         "more lease options or widening the search.",
+                "results": [], "count": 0, "centre": list(centre),
+                "radius_used": radius_used, "providers": providers,
+                "stay_months": stay_months}
+
+    # 5) score everything, then guarantee a spread of picks on the first page.
+    #    The FULL ranked list is returned; main.py slices the requested page.
+    window = prefs.get("page_size") or prefs.get("top_n", 5)
     ranked = rank_listings(listings, prefs, top_n=len(listings))
-    results = apply_spread(ranked, top_n)
+    results = apply_spread(ranked, window)
 
     priced_n = sum(1 for r in results if r["price_known"])
     if priced_n:
@@ -182,4 +203,4 @@ def build_and_score(prefs: dict, city: str | None = None,
                 "partner feed (Travelpayouts/Hotelbeds/...) is configured.")
     return {"error": None, "centre": list(centre), "count": len(results),
             "results": results, "note": note, "radius_used": radius_used,
-            "providers": providers, "stay_months": stay_months, "rainy_season": rainy}
+            "providers": providers, "stay_months": stay_months}

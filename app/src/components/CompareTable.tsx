@@ -1,5 +1,5 @@
 import type { ListingResult } from "@/lib/api";
-import { fmtTHB } from "@/lib/fare";
+import { fmtMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 
 function avgStars(r: ListingResult): number | null {
@@ -9,7 +9,8 @@ function avgStars(r: ListingResult): number | null {
 
 interface Row {
   label: string;
-  value: (r: ListingResult) => string;
+  /** Money rows format through the user's selected currency, not hardcoded THB. */
+  value: (r: ListingResult, currency: string) => string;
   /** Numeric basis for the "best in row" highlight, with direction. */
   best?: { metric: (r: ListingResult) => number | null; dir: "min" | "max" };
 }
@@ -18,17 +19,17 @@ const ROWS: Row[] = [
   { label: "Match", value: (r) => `${r.score}%`, best: { metric: (r) => r.score, dir: "max" } },
   {
     label: "Rent /mo",
-    value: (r) => (r.price_known && r.rent != null ? fmtTHB(r.rent) : "On request"),
+    value: (r, c) => (r.price_known && r.rent != null ? fmtMoney(r.rent, c) : "On request"),
     best: { metric: (r) => (r.price_known ? r.rent : null), dir: "min" },
   },
   {
     label: "Est. commute fare /mo",
-    value: (r) => fmtTHB(r.monthly_fare),
+    value: (r, c) => fmtMoney(r.monthly_fare, c),
     best: { metric: (r) => r.monthly_fare, dir: "min" },
   },
   {
     label: "True cost /mo",
-    value: (r) => (r.true_cost != null ? fmtTHB(r.true_cost) : "—"),
+    value: (r, c) => (r.true_cost != null ? fmtMoney(r.true_cost, c) : "—"),
     best: { metric: (r) => r.true_cost, dir: "min" },
   },
   {
@@ -62,7 +63,13 @@ function bestIndex(row: Row, items: ListingResult[]): number | null {
   return bi >= 0 ? bi : null;
 }
 
-export function CompareTable({ items }: { items: ListingResult[] }) {
+export function CompareTable({
+  items,
+  currency = "THB",
+}: {
+  items: ListingResult[];
+  currency?: string;
+}) {
   return (
     <div className="overflow-x-auto rounded-2xl border border-line">
       <table className="w-full text-sm border-collapse">
@@ -95,7 +102,7 @@ export function CompareTable({ items }: { items: ListingResult[] }) {
                       bi === i && "text-ok font-bold",
                     )}
                   >
-                    {row.value(r)}
+                    {row.value(r, currency)}
                   </td>
                 ))}
               </tr>

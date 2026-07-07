@@ -1,22 +1,16 @@
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
-import { GUIDE } from "@/lib/constants";
+import { GUIDE, PRE_DEPARTURE, type GuideItem } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 
-export function Guide() {
+function Accordion({ items, keyPrefix }: { items: GuideItem[]; keyPrefix: string }) {
   const [open, setOpen] = useState<number | null>(null);
   return (
-    <div className="space-y-3 animate-sift-fade">
-      <p className="text-xs text-muted font-medium">
-        Avoid the classic newcomer mistakes — SiftPlace's quick checklist.
-      </p>
-      {GUIDE.map((g, i) => {
+    <div className="space-y-3">
+      {items.map((g, i) => {
         const isOpen = open === i;
         return (
-          <div
-            key={g.q}
-            className="sf-card overflow-hidden"
-          >
+          <div key={keyPrefix + g.q} className="sf-card overflow-hidden">
             <button
               type="button"
               onClick={() => setOpen(isOpen ? null : i)}
@@ -36,6 +30,29 @@ export function Guide() {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+export function Guide() {
+  return (
+    <div className="space-y-6 animate-sift-fade">
+      <div className="space-y-3">
+        <p className="text-xs text-muted font-medium">
+          Avoid the classic newcomer mistakes — SiftPlace's quick checklist.
+        </p>
+        <Accordion items={GUIDE} keyPrefix="guide-" />
+      </div>
+
+      {/* pre-departure checklist — static "before you move" content */}
+      <div className="space-y-3">
+        <h3 className="text-base font-bold text-ink">🧳 Before you move</h3>
+        <p className="text-xs text-muted font-medium">
+          The boring-but-vital admin, in order. Sort these before your flight and week one takes
+          care of itself.
+        </p>
+        <Accordion items={PRE_DEPARTURE} keyPrefix="pre-" />
+      </div>
     </div>
   );
 }

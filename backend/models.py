@@ -69,11 +69,55 @@ class CityScoreRequest(BaseModel):
     radius_m: int = Field(2500, ge=500, le=8000, description="Search radius around the centre")
     max_listings: int = Field(30, ge=1, le=60)
     top_n: int = Field(5, ge=1, le=20)
+    # pagination: results come back one page at a time. page_size falls back to
+    # top_n so pre-pagination clients see exactly what they always did.
+    page: int = Field(1, ge=1, le=50)
+    page_size: int | None = Field(None, ge=1, le=24)
+    # lease-length filter (Task: lease_type). Listings with a KNOWN conflicting
+    # lease type are excluded; unknown ones pass with a "confirm with landlord" note.
+    lease_types: list[str] = Field(default_factory=list,
+                                   description="standard | short_term | monthly")
+    # privacy: allow the submitted note to be stored as NLP training data
+    allow_training: bool = Field(True, description="Opt-out switch for note storage")
 
 
 class ParseRequest(BaseModel):
     """Free-text 'Anything else?' note to turn into structured demands."""
     text: str = Field("", max_length=2000)
+
+
+class NoteDeleteRequest(BaseModel):
+    """Privacy: remove a previously stored note from the NLP training data."""
+    text: str = Field(..., min_length=1, max_length=2000)
+
+
+class ChatMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., max_length=2000)
+
+
+class ChatRequest(BaseModel):
+    """A turn of the Sift mascot conversation. `messages` is the running
+    transcript (oldest first); the last entry must be the user's new message."""
+    messages: list[ChatMessage] = Field(..., min_length=1, max_length=30)
+    # what's already selected, so the assistant doesn't re-ask (optional)
+    filters_summary: str | None = Field(None, max_length=1000)
+
+
+class ChatResponse(BaseModel):
+    reply: str
+    # same shape as /parse: amenities/nearby/types/vibe/weight_nudges/must_haves/detected
+    parsed: dict
+    engine: str = "rules"
+
+
+class FeedbackRequest(BaseModel):
+    """Community accuracy vote / scam report for one listing."""
+    name: str = Field(..., min_length=1, max_length=200)
+    lat: float
+    lon: float
+    accurate: bool
+    report: str | None = Field(None, max_length=1000)
 
 
 class Offer(BaseModel):
@@ -118,6 +162,15 @@ class ListingResult(BaseModel):
     stars: float | None = None
     # spread markers: top_match | best_value | best_quality
     badge: str | None = None
+    # lease length when known: standard | short_term | monthly (None = ask)
+    lease_type: str | None = None
+    # "what else you'll spend" monthly estimates (see col.py)
+    cost_of_living: dict | None = None
+    # community accuracy feedback aggregate: {up, down, flagged}
+    community: dict | None = None
+    # semantic layer (when enabled): cosine similarity + LLM one-liner
+    semantic: float | None = None
+    ai_reason: str | None = None
 
 
 class ScoreResponse(BaseModel):
@@ -126,9 +179,14 @@ class ScoreResponse(BaseModel):
     note: str | None = None
     centre: list[float] | None = None
     radius_used: int | None = None
-    # stay metadata (from check_in/check_out)
+    # stay metadata (from check_in/check_out). Seasonal rain/flood assessment
+    # lives in /flood-risk alone (the old rainy_season boolean duplicated it).
     stay_months: float | None = None
-    rainy_season: bool = False
     # what the NLP layer extracted from notes/other answers (transparency)
     parsed: dict | None = None
     providers: list[str] = Field(default_factory=list)
+    # pagination (total = all ranked matches; results holds only this page)
+    total: int | None = None
+    page: int | None = None
+    page_size: int | None = None
+    total_pages: int | None = None

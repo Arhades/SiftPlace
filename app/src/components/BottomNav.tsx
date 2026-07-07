@@ -21,7 +21,7 @@ export function BottomNav({
 }) {
   return (
     <nav className="sticky bottom-0 z-40 border-t border-line bg-lowest/95 backdrop-blur-md">
-      <div className="max-w-3xl mx-auto flex justify-around px-2 py-2">
+      <div className="max-w-5xl mx-auto flex justify-around px-2 py-2">
         {TABS.map(({ id, label, Icon }) => {
           const active = tab === id;
           return (

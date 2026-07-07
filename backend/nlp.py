@@ -9,9 +9,12 @@ Two engines:
      `nlp_model.joblib` at startup when it exists; never retrained per request.
 
 How the model keeps improving ("retrain as users add sentences"):
-  * every note that reaches `parse_notes` is appended to **`nlp_training.csv`**,
+  * every explicitly SUBMITTED "Anything else?" note is appended (once — repeat
+    submissions of the same text are deduplicated) to **`nlp_training.csv`**,
     auto-labelled by the rules parser (weak supervision — no labelled data is
-    needed to start),
+    needed to start). Parsing alone never writes: the caller opts in via
+    `record_note()`, and users can opt out / request deletion
+    (`delete_training_examples`),
   * `python nlp_train.py` (or POST /admin/retrain) re-fits on everything
     accumulated so far and saves the better of Naive Bayes vs MLP,
   * the vectorizer re-fits on the accumulated corpus each time, so new words
@@ -297,19 +300,51 @@ def parse_model(text: str) -> dict | None:
 
 
 # ---- training-data accumulation (weak supervision) ------------------------------
+#
+# Recording is EXPLICIT: parse_notes never writes (it runs on live previews and
+# every filter apply — writing there was I/O on every search and re-recorded
+# the same note endlessly). main.py calls record_note() only when a submitted
+# search carries a note AND the user hasn't opted out; a seen-hash set keeps
+# repeat applies of the same text to one row.
 
 _training_lock = threading.Lock()
+_recorded_hashes: set[str] | None = None   # lazy-loaded from the CSV
 
 
-def record_training_example(text: str, rules_parsed: dict) -> None:
-    """Append a submitted note to nlp_training.csv, auto-labelled by the rules
-    parser. This is the data every retrain re-fits on. Never raises."""
+def _note_hash(note: str) -> str:
+    import hashlib
+    return hashlib.sha256(note.lower().encode("utf-8")).hexdigest()[:16]
+
+
+def _load_recorded_hashes() -> set[str]:
+    """Hashes of every note already in the CSV, so restarts don't re-record."""
+    hashes: set[str] = set()
+    try:
+        with open(TRAINING_CSV, newline="", encoding="utf-8") as f:
+            for row in csv.DictReader(f):
+                text = (row.get("text") or "").strip()
+                if text:
+                    hashes.add(_note_hash(text))
+    except Exception:
+        pass
+    return hashes
+
+
+def record_note(text: str) -> None:
+    """Append an explicitly submitted note to nlp_training.csv, auto-labelled
+    by the rules parser — once per distinct text. Never raises."""
     try:
         note = (text or "").strip()
         if not 3 <= len(note) <= 500:
             return
-        labels = " ".join(labels_from_parsed(rules_parsed))
+        labels = " ".join(labels_from_parsed(parse_rules(note)))
+        digest = _note_hash(note)
+        global _recorded_hashes
         with _training_lock:
+            if _recorded_hashes is None:
+                _recorded_hashes = _load_recorded_hashes()
+            if digest in _recorded_hashes:
+                return
             exists = TRAINING_CSV.exists()
             if exists:
                 # cheap row cap: count only when the file is getting big
@@ -320,22 +355,49 @@ def record_training_example(text: str, rules_parsed: dict) -> None:
                 if not exists:
                     writer.writerow(["text", "labels"])
                 writer.writerow([note, labels])
+            _recorded_hashes.add(digest)
     except Exception:
         pass
+
+
+def delete_training_examples(text: str) -> int:
+    """Remove every stored row whose note matches `text` (case-insensitive) —
+    the privacy deletion path. Returns how many rows were removed."""
+    try:
+        needle = (text or "").strip().lower()
+        if not needle:
+            return 0
+        global _recorded_hashes
+        with _training_lock:
+            if not TRAINING_CSV.exists():
+                return 0
+            with open(TRAINING_CSV, newline="", encoding="utf-8") as f:
+                rows = list(csv.DictReader(f))
+            kept = [r for r in rows if (r.get("text") or "").strip().lower() != needle]
+            removed = len(rows) - len(kept)
+            if removed:
+                with open(TRAINING_CSV, "w", newline="", encoding="utf-8") as f:
+                    writer = csv.writer(f)
+                    writer.writerow(["text", "labels"])
+                    for r in kept:
+                        writer.writerow([r.get("text", ""), r.get("labels", "")])
+                _recorded_hashes = None  # force a reload next record
+            return removed
+    except Exception:
+        return 0
 
 
 # ---- public entry point ----------------------------------------------------------
 
 def parse_notes(text: str) -> dict:
-    """Best available engine, never raises.
+    """Best available engine, never raises. Read-only: recording a note as
+    training data is the caller's explicit choice (record_note).
 
     Model predictions are UNIONED with the rules parser: the model adds
     synonym matches the keywords missed; the rules guarantee the exact-keyword
     baseline and contribute the nudges/must-haves the model doesn't learn.
-    Every note is also recorded as (weakly labelled) training data.
     """
     rules = parse_rules(text)
-    record_training_example(text, rules)
 
     model = parse_model(text)
     if model is None:
