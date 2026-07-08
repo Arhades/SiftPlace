@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { GUIDE, PRE_DEPARTURE, type GuideItem } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { VendorPicker } from "./VendorPicker";
 
 function Accordion({ items, keyPrefix }: { items: GuideItem[]; keyPrefix: string }) {
   const [open, setOpen] = useState<number | null>(null);
@@ -25,7 +26,14 @@ function Accordion({ items, keyPrefix }: { items: GuideItem[]; keyPrefix: string
               />
             </button>
             {isOpen && (
-              <p className="px-4 pb-4 pl-16 text-sm text-muted leading-relaxed font-medium">{g.a}</p>
+              <div className="px-4 pb-4 pl-16">
+                <p className="text-sm text-muted leading-relaxed font-medium">{g.a}</p>
+                {g.vendors && (
+                  <div className="mt-3">
+                    <VendorPicker group={g.vendors} />
+                  </div>
+                )}
+              </div>
             )}
           </div>
         );
@@ -52,6 +60,10 @@ export function Guide() {
           care of itself.
         </p>
         <Accordion items={PRE_DEPARTURE} keyPrefix="pre-" />
+        <p className="text-[10px] text-muted/70 font-medium px-1">
+          Some checklist links are affiliate links — booking through them supports SiftPlace at no
+          extra cost to you. SiftPlace stays free for students.
+        </p>
       </div>
     </div>
   );

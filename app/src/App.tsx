@@ -433,7 +433,9 @@ function App() {
             ))}
 
           {tab === "saved" && <Saved items={savedItems} onToggleSave={toggleSave} currency={ctx.currency} />}
-          {tab === "areas" && <Areas />}
+          {tab === "areas" && (
+            <Areas savedNames={savedNames} onToggleSave={toggleSave} currency={ctx.currency} />
+          )}
           {tab === "guide" && <Guide />}
         </main>
 

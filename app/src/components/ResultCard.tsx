@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { MapPin, Clock, Heart, Map as MapIcon, ChevronDown, Wallet } from "lucide-react";
+import { MapPin, Clock, Heart, Map as MapIcon, ChevronDown, MessageCircle, Wallet } from "lucide-react";
 import type { Badge, Community, ListingResult } from "@/lib/api";
-import { sendFeedback } from "@/lib/api";
 import { fmtMoney } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +12,7 @@ import {
   osmLink,
   otherMode,
 } from "@/lib/fare";
+import { ListingDetail } from "./ListingDetail";
 import { PriceCompare } from "./PriceCompare";
 
 const LEVEL_STYLE: Record<"low" | "moderate" | "high", string> = {
@@ -46,12 +46,15 @@ export function ResultCard({
   saved,
   currency = "THB",
   onToggleSave,
+  hideMetrics = false,
 }: {
   r: ListingResult;
   isTop: boolean;
   saved: boolean;
   currency?: string;
   onToggleSave: (listing: ListingResult) => void;
+  /** Areas tab browse mode: hide the match score + cost/location/living bars. */
+  hideMetrics?: boolean;
 }) {
   const mode = r.mode;
   const other = otherMode(mode);
@@ -62,30 +65,10 @@ export function ResultCard({
   const [colOpen, setColOpen] = useState(false);
   const col = r.cost_of_living;
 
-  // community accuracy feedback (one vote per visitor per listing, server-side)
+  // Community aggregate is owned here (for the ⚠️ chip); votes/reports/comments
+  // and the view counter live in the click-through ListingDetail panel.
   const [community, setCommunity] = useState<Community | null>(r.community);
-  const [voted, setVoted] = useState<"up" | "down" | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
-  const [report, setReport] = useState("");
-  const canVote = r.lat != null && r.lon != null && r.source !== "featured";
-
-  const vote = (accurate: boolean) => {
-    if (r.lat == null || r.lon == null) return;
-    setVoted(accurate ? "up" : "down");
-    setReportOpen(!accurate);
-    sendFeedback({ name: r.name, lat: r.lat, lon: r.lon }, accurate)
-      .then((res) => setCommunity(res.community))
-      .catch(() => {});
-  };
-
-  const submitReport = () => {
-    if (r.lat == null || r.lon == null || !report.trim()) return;
-    sendFeedback({ name: r.name, lat: r.lat, lon: r.lon }, false, report.trim())
-      .then((res) => setCommunity(res.community))
-      .catch(() => {});
-    setReportOpen(false);
-    setReport("");
-  };
+  const [detailOpen, setDetailOpen] = useState(false);
 
   return (
     <article
@@ -99,14 +82,16 @@ export function ResultCard({
       {/* header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-surface text-xs font-bold">
-            ★ {r.score}% match
-          </span>
+          {!hideMetrics && (
+            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-ink text-surface text-xs font-bold">
+              ★ {r.score}% match
+            </span>
+          )}
           {isTop ? (
             <span className="px-2.5 py-1 rounded-full bg-primary text-on-primary text-[11px] font-bold">
               ⭐ Top pick
             </span>
-          ) : r.score >= 80 ? (
+          ) : !hideMetrics && r.score >= 80 ? (
             <span className="px-2.5 py-1 rounded-full bg-ok-soft text-ok text-[11px] font-bold">
               Great fit
             </span>
@@ -142,9 +127,15 @@ export function ResultCard({
         </button>
       </div>
 
-      {/* title */}
-      <h3 className="mt-3 text-lg font-bold text-ink leading-tight">
-        {r.name}
+      {/* title — click to open the detail panel (views, rating, comments) */}
+      <h3 className="mt-3 text-lg font-bold leading-tight">
+        <button
+          type="button"
+          onClick={() => setDetailOpen(true)}
+          className="text-left text-ink hover:text-secondary-dim hover:underline underline-offset-2 transition cursor-pointer"
+        >
+          {r.name}
+        </button>
         {r.stars != null && r.stars > 0 && (
           <span className="ml-1.5 text-xs font-bold text-primary-dim align-middle">
             {"★".repeat(Math.max(1, Math.min(5, Math.round(r.stars))))}
@@ -294,26 +285,28 @@ export function ResultCard({
         ))}
       </div>
 
-      {/* subscores */}
-      <div className="mt-4 grid grid-cols-3 gap-3">
-        {SUBSCORE_META.map(({ key, label }) => {
-          const pct = Math.round((r.subscores[key] ?? 0) * 100);
-          return (
-            <div key={key}>
-              <div className="flex items-center justify-between text-[10px] text-muted mb-1">
-                <span className="uppercase tracking-wide font-bold">{label}</span>
-                <span className="text-ink font-bold">{pct}</span>
+      {/* subscores — hidden in the Areas browse view */}
+      {!hideMetrics && (
+        <div className="mt-4 grid grid-cols-3 gap-3">
+          {SUBSCORE_META.map(({ key, label }) => {
+            const pct = Math.round((r.subscores[key] ?? 0) * 100);
+            return (
+              <div key={key}>
+                <div className="flex items-center justify-between text-[10px] text-muted mb-1">
+                  <span className="uppercase tracking-wide font-bold">{label}</span>
+                  <span className="text-ink font-bold">{pct}</span>
+                </div>
+                <div className="h-2 rounded-full bg-surface-high overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-gradient-to-r from-primary to-primary-dim"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
               </div>
-              <div className="h-2 rounded-full bg-surface-high overflow-hidden">
-                <div
-                  className="h-full rounded-full bg-gradient-to-r from-primary to-primary-dim"
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* review */}
       {r.reviews.length > 0 && (
@@ -325,7 +318,7 @@ export function ResultCard({
         </p>
       )}
 
-      {/* footer: map link + community accuracy feedback */}
+      {/* footer: map link + the click-through to views / rating / comments */}
       <div className="mt-4 flex items-center justify-between gap-2 flex-wrap">
         <a
           href={osmLink(r.lat, r.lon)}
@@ -335,60 +328,32 @@ export function ResultCard({
         >
           <MapIcon className="h-3.5 w-3.5" /> View on map
         </a>
-        {canVote && (
-          <div className="flex items-center gap-1.5 text-[11px] text-muted font-medium">
-            <span>Accurate?</span>
-            <button
-              type="button"
-              aria-label="Listing was accurate"
-              onClick={() => vote(true)}
-              disabled={voted !== null}
-              className={cn(
-                "px-2 py-1 rounded-full border transition cursor-pointer disabled:cursor-default",
-                voted === "up" ? "bg-ok-soft border-ok/40 text-ok font-bold" : "border-line hover:bg-surface-c",
-              )}
-            >
-              👍{community && community.up > 0 ? ` ${community.up}` : ""}
-            </button>
-            <button
-              type="button"
-              aria-label="Listing was inaccurate"
-              onClick={() => vote(false)}
-              disabled={voted !== null}
-              className={cn(
-                "px-2 py-1 rounded-full border transition cursor-pointer disabled:cursor-default",
-                voted === "down" ? "bg-error-soft border-error/40 text-error font-bold" : "border-line hover:bg-surface-c",
-              )}
-            >
-              👎{community && community.down > 0 ? ` ${community.down}` : ""}
-            </button>
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setDetailOpen(true)}
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border-2 border-line bg-lowest text-[11px] font-bold text-ink hover:bg-surface-c transition cursor-pointer"
+        >
+          <MessageCircle className="h-3.5 w-3.5" />
+          Reviews &amp; details
+          {community && community.up + community.down > 0 && (
+            <span className="text-muted font-semibold">
+              👍{community.up} 👎{community.down}
+            </span>
+          )}
+        </button>
       </div>
-      {reportOpen && (
-        <div className="mt-2 flex items-center gap-2">
-          <input
-            className="sf-field flex-1 min-w-0 text-xs"
-            placeholder="What was wrong? (optional — helps us catch scams)"
-            value={report}
-            maxLength={500}
-            onChange={(e) => setReport(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submitReport();
-              }
-            }}
-          />
-          <button
-            type="button"
-            onClick={submitReport}
-            disabled={!report.trim()}
-            className="px-3 py-2 rounded-full border-2 border-line text-[11px] font-bold text-muted hover:bg-surface-c cursor-pointer disabled:opacity-40"
-          >
-            Send
-          </button>
-        </div>
+
+      {/* the listing's community home: views, 👍/👎 rating, student comments */}
+      {detailOpen && (
+        <ListingDetail
+          r={r}
+          currency={currency}
+          saved={saved}
+          onToggleSave={onToggleSave}
+          community={community}
+          onCommunity={setCommunity}
+          onClose={() => setDetailOpen(false)}
+        />
       )}
     </article>
   );

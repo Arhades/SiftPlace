@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { reportProblem } from "@/lib/telemetry";
 import { cn } from "@/lib/utils";
 
 // Staged search progress. Stages advance on a timer while the request runs
@@ -106,6 +107,21 @@ export function ErrorState({
   onRetry: () => void;
   onEdit: () => void;
 }) {
+  const [reported, setReported] = useState(false);
+
+  const report = async () => {
+    const res = await reportProblem({
+      kind: "user",
+      message,
+      context: "search error state",
+    });
+    if (res.outcome === "mail") {
+      // no report database configured — hand the user a pre-filled email
+      window.location.href = res.mailto;
+    }
+    setReported(true);
+  };
+
   return (
     <div className="flex flex-col items-center justify-center text-center py-20 px-6 animate-sift-fade">
       <div className="text-5xl mb-4">⚠️</div>
@@ -114,7 +130,7 @@ export function ErrorState({
       <p className="text-xs text-muted/70 max-w-xs mb-6 font-medium">
         Make sure the backend is running and reachable at the configured VITE_API_URL.
       </p>
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap justify-center">
         <button
           onClick={onRetry}
           className="sf-cta px-5 py-2.5 text-sm cursor-pointer"
@@ -126,6 +142,13 @@ export function ErrorState({
           className="px-5 py-2.5 rounded-full border-2 border-line text-muted text-sm font-bold hover:bg-surface-c cursor-pointer"
         >
           Edit search
+        </button>
+        <button
+          onClick={() => void report()}
+          disabled={reported}
+          className="px-5 py-2.5 rounded-full border-2 border-line text-muted text-sm font-bold hover:bg-surface-c cursor-pointer disabled:opacity-50 disabled:cursor-default"
+        >
+          {reported ? "Reported — thanks! 💛" : "Report this problem"}
         </button>
       </div>
     </div>

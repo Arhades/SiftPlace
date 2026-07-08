@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
-import { Logo } from "@/components/Logo";
+import { SiftBot } from "@/components/SiftBot";
 import { chat, type ChatMessage, type ParsedNotes } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -11,8 +11,8 @@ import { cn } from "@/lib/utils";
 // to the filters and re-run the search — the chips under the reply make that
 // visible ("Got it — added quiet + near gym").
 //
-// Placeholder art on purpose: the avatar is the existing pixel "Sift" brand
-// mark. The interaction is the product; the artwork can be swapped later.
+// The avatar is "Sift" the robot (SiftBot.tsx) — a cute humanoid robot whose
+// face screen shows the house logo for now; the character art can evolve later.
 
 interface Bubble {
   role: "user" | "assistant";
@@ -107,20 +107,21 @@ export function SiftChat({
 
   return (
     <>
-      {/* floating mascot button — follows the user on scroll */}
+      {/* floating robot mascot — follows the user on scroll */}
       <button
         type="button"
         aria-label={open ? "Close Sift chat" : "Chat with Sift"}
         onClick={() => setOpen((o) => !o)}
         className={cn(
-          "fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-[0_10px_28px_-8px_rgba(44,22,14,0.45)]",
-          "border-2 border-primary-dim bg-lowest flex items-center justify-center",
-          "transition hover:scale-105 active:scale-95 cursor-pointer",
+          "fixed bottom-20 right-4 z-40 transition hover:scale-105 active:scale-95 cursor-pointer",
+          open
+            ? "h-14 w-14 rounded-full shadow-[0_10px_28px_-8px_rgba(44,22,14,0.45)] border-2 border-primary-dim bg-lowest flex items-center justify-center"
+            : "drop-shadow-[0_10px_14px_rgba(44,22,14,0.35)]",
         )}
       >
-        {open ? <X className="h-5 w-5 text-muted" /> : <Logo size={40} />}
+        {open ? <X className="h-5 w-5 text-muted" /> : <SiftBot size={82} />}
         {!open && (
-          <span className="absolute -top-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-primary border-2 border-lowest animate-pulse" />
+          <span className="absolute top-3 -right-1 h-3.5 w-3.5 rounded-full bg-primary border-2 border-lowest animate-pulse" />
         )}
       </button>
 
@@ -132,7 +133,7 @@ export function SiftChat({
           aria-label="Sift chat"
         >
           <div className="flex items-center gap-2.5 px-4 py-3 border-b border-line bg-surface-low">
-            <Logo size={32} />
+            <SiftBot size={38} />
             <div className="min-w-0">
               <p className="text-sm font-bold text-ink leading-tight">Sift</p>
               <p className="text-[11px] text-muted font-medium leading-tight">

@@ -11,7 +11,7 @@ export default defineConfig({
     // briefly so a flaky connection still shows the last results.
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['apple-touch-icon.png'],
+      includeAssets: ['apple-touch-icon.png', 'siftplace-logo.svg'],
       manifest: {
         name: 'SiftPlace — find your place',
         short_name: 'SiftPlace',
