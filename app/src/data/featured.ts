@@ -38,7 +38,7 @@ const base = {
 
 export const FEATURED_NOTE =
   "Curated starter picks for central Bangkok with estimated prices — run a search " +
-  "(Filter, or ask Sift) to see live places ranked for YOUR priorities.";
+  "with Filter to see live places ranked for YOUR priorities.";
 
 export const FEATURED_LISTINGS: ListingResult[] = [
   {

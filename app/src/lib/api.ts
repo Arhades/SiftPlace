@@ -170,10 +170,29 @@ export interface ChatMessage {
   content: string;
 }
 
+/** Read-only fields Sift may use to explain or compare the displayed homes. */
+export interface ChatListingContext {
+  name: string;
+  area: string;
+  score: number;
+  rent: number | null;
+  true_cost: number | null;
+  true_cost_incl_time: number | null;
+  price_known: boolean;
+  commute_min: number;
+  monthly_fare: number | null;
+  monthly_hours: number;
+  time_cost: number | null;
+  mode: CommuteMode;
+  subscores: Partial<SubScores>;
+  badge: Badge | null;
+  matched_amenities: string[];
+}
+
 export interface ChatResponse {
   reply: string;
   parsed: ParsedNotes;
-  /** Which engine answered: agnes | openai | rules-fallback(...) */
+  /** Which engine answered: product-guide | ui-guide | agnes | openai | rules-fallback(...) */
   engine: string;
 }
 
@@ -279,17 +298,24 @@ export function getRates(): Promise<RatesResponse> {
   return request(`/rates`);
 }
 
-/** One Sift-mascot turn: reply + demands extracted server-side (Agnes AI ->
- *  OpenAI -> offline rules — same shape whichever engine answered). */
+/** One Sift-mascot turn: grounded UI help + demands extracted server-side
+ *  (Agnes AI -> OpenAI -> offline rules — same shape whichever engine answered). */
 export function chat(
   messages: ChatMessage[],
   filtersSummary?: string,
+  screenContext?: string,
+  listingsContext: ChatListingContext[] = [],
   signal?: AbortSignal,
 ): Promise<ChatResponse> {
   return request(`/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ messages, filters_summary: filtersSummary ?? null }),
+    body: JSON.stringify({
+      messages,
+      filters_summary: filtersSummary ?? null,
+      screen_context: screenContext ?? null,
+      listings_context: listingsContext,
+    }),
     signal,
   });
 }

@@ -206,7 +206,7 @@ export function Intake({
         <p className="mt-2 text-sm text-muted max-w-md mx-auto font-medium">
           Budget, where you go daily, what matters — we rank every listing by its{" "}
           <span className="text-ink font-bold">true monthly cost</span>. Anything else? Just
-          say it in your own words below, or chat with Sift.
+          say it in your own words below.
         </p>
       </div>
 

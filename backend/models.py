@@ -96,12 +96,37 @@ class ChatMessage(BaseModel):
     content: str = Field(..., max_length=2000)
 
 
+class ChatListingContext(BaseModel):
+    """Small, read-only listing summary supplied to Sift for comparisons."""
+    name: str = Field(..., min_length=1, max_length=200)
+    area: str = Field("", max_length=120)
+    score: int = Field(0, ge=0, le=100)
+    rent: float | None = Field(None, ge=0)
+    true_cost: float | None = Field(None, ge=0)
+    true_cost_incl_time: float | None = Field(None, ge=0)
+    price_known: bool = True
+    commute_min: int = Field(0, ge=0)
+    monthly_fare: float | None = Field(None, ge=0)
+    monthly_hours: float = Field(0, ge=0)
+    time_cost: float | None = Field(None, ge=0)
+    mode: Literal["car", "bike", "transit", "walk"] = "car"
+    subscores: dict[str, float] = Field(default_factory=dict)
+    badge: str | None = Field(None, max_length=40)
+    matched_amenities: list[str] = Field(default_factory=list, max_length=20)
+
+
 class ChatRequest(BaseModel):
     """A turn of the Sift mascot conversation. `messages` is the running
     transcript (oldest first); the last entry must be the user's new message."""
     messages: list[ChatMessage] = Field(..., min_length=1, max_length=30)
     # what's already selected, so the assistant doesn't re-ask (optional)
     filters_summary: str | None = Field(None, max_length=1000)
+    # current single-page-app tab, so UI directions can start from where the
+    # user actually is. llm.py whitelists the known values before prompting.
+    screen_context: str | None = Field(None, max_length=40)
+    # The current page of results, or the user's saved shortlist. This lets the
+    # assistant compare actual displayed homes instead of inventing an answer.
+    listings_context: list[ChatListingContext] = Field(default_factory=list, max_length=8)
 
 
 class ChatResponse(BaseModel):

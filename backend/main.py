@@ -183,12 +183,12 @@ def parse_endpoint(request: Request, req: ParseRequest):
 @app.post("/chat", response_model=ChatResponse)
 @rate_limit(CHAT_LIMIT)
 def chat_endpoint(request: Request, req: ChatRequest):
-    """One turn of the Sift mascot conversation. The LLM chain (Agnes AI ->
-    OpenAI -> offline nlp.py rules) replies AND extracts structured demands in
-    the same shape /parse returns — the frontend applies them to the filters."""
+    """One turn of the Sift mascot conversation. It answers grounded in-app
+    questions and extracts housing demands in the same shape /parse returns."""
     require_human(request)
     messages = [{"role": m.role, "content": m.content} for m in req.messages]
-    return chat_reply(messages, req.filters_summary)
+    listings = [listing.model_dump() for listing in req.listings_context]
+    return chat_reply(messages, req.filters_summary, req.screen_context, listings)
 
 
 @app.post("/feedback")

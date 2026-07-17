@@ -9,7 +9,6 @@ import {
   type CommuteMode,
   type FloodRisk,
   type ListingResult,
-  type ParsedNotes,
   type SearchRequest,
 } from "@/lib/api";
 import { setRates } from "@/lib/currency";
@@ -309,34 +308,6 @@ function App() {
     void handleSearch(intake, true);
   };
 
-  // The Sift mascot extracted structured demands — apply them to the filters
-  // (visibly: chips change) and re-run the search, exactly like the form would.
-  const applyChatDemands = (parsed: ParsedNotes, userText: string) => {
-    const values: IntakeValues = { ...intake };
-    (["amenities", "nearby", "types"] as const).forEach((bucket) => {
-      const merged = [...values[bucket]];
-      for (const key of parsed[bucket]) if (!merged.includes(key)) merged.push(key);
-      values[bucket] = merged;
-    });
-    if (parsed.vibe && !values.vibe) values.vibe = parsed.vibe;
-    const weights = { ...values.weights };
-    (["cost", "location", "living"] as const).forEach((axis) => {
-      const delta = parsed.weight_nudges[axis];
-      if (delta) weights[axis] = Math.max(0, Math.min(10, weights[axis] + delta));
-    });
-    // keep the 20-point cap the sliders enforce: trim the heaviest axis
-    while (weights.cost + weights.location + weights.living > 20) {
-      const heaviest = (["cost", "location", "living"] as const)
-        .reduce((a, b) => (weights[a] >= weights[b] ? a : b));
-      weights[heaviest] -= 1;
-    }
-    values.weights = weights;
-    // carry the plain-language ask so the backend NLP + semantic layer see it
-    values.notes = [values.notes, userText].filter(Boolean).join(". ").slice(-500);
-    setTab("listings");
-    void handleSearch(values);
-  };
-
   const filtersSummary = [
     `city ${intake.city || "?"}`,
     intake.destination && `commute to ${intake.destination}`,
@@ -361,6 +332,7 @@ function App() {
 
   const savedNames = new Set(saved.keys());
   const savedItems = [...saved.values()];
+  const chatListings = tab === "saved" ? savedItems : tab === "listings" ? results : [];
 
   return (
     <div className="min-h-screen text-ink">
@@ -444,7 +416,11 @@ function App() {
 
       {/* the Sift mascot — hidden while the filter overlay is up */}
       {!filterOpen && (
-        <SiftChat filtersSummary={filtersSummary} onDemands={applyChatDemands} />
+        <SiftChat
+          filtersSummary={filtersSummary}
+          currentSection={tab}
+          listings={chatListings}
+        />
       )}
 
       {/* SiftPlace filter overlay */}

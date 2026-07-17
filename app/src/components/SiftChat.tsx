@@ -1,15 +1,20 @@
 import { useEffect, useRef, useState } from "react";
-import { Send, X } from "lucide-react";
+import { X } from "lucide-react";
 import { SiftBot } from "@/components/SiftBot";
-import { chat, type ChatMessage, type ParsedNotes } from "@/lib/api";
+import {
+  chat,
+  type ChatListingContext,
+  type ChatMessage,
+  type ListingResult,
+} from "@/lib/api";
+import {
+  SIFT_QUESTION_CATEGORIES,
+  type SiftQuestionCategoryId,
+} from "@/data/siftQuestions";
 import { cn } from "@/lib/utils";
 
-// The "Sift" mascot chatbot — a floating avatar that follows the user (fixed
-// position) and opens a chat panel. The student describes what they want in
-// plain language; the backend LLM chain (Agnes AI -> OpenAI -> offline rules)
-// replies AND extracts structured demands, which we hand to the app to apply
-// to the filters and re-run the search — the chips under the reply make that
-// visible ("Got it — added quiet + near gym").
+// The "Sift" mascot chatbot — a fixed-question in-app guide. Users choose from
+// the supported catalogue instead of entering arbitrary prompts.
 //
 // The avatar is "Sift" the robot (SiftBot.tsx) — a cute humanoid robot whose
 // face screen shows the house logo for now; the character art can evolve later.
@@ -17,13 +22,10 @@ import { cn } from "@/lib/utils";
 interface Bubble {
   role: "user" | "assistant";
   content: string;
-  /** Filter chips this turn added — rendered under the reply. */
-  chips?: string[];
 }
 
 const GREETING =
-  "Hi, I'm Sift! 👋 Tell me about your ideal place — like \"somewhere quiet near " +
-  "Chula, under ฿15k, with a real desk\" — and I'll set the filters for you.";
+  "Hi, I'm Sift! 👋 Choose a question below and I'll guide you through SiftPlace.";
 
 /** Streamed-feel reply: reveal ~3 characters per tick. */
 const STREAM_CHARS_PER_TICK = 3;
@@ -31,16 +33,19 @@ const STREAM_TICK_MS = 18;
 
 export function SiftChat({
   filtersSummary,
-  onDemands,
+  currentSection,
+  listings,
 }: {
   /** Short human-readable summary of the current filters (context for the LLM). */
   filtersSummary: string;
-  /** Apply extracted demands to the filters + re-run the search. */
-  onDemands: (parsed: ParsedNotes, userText: string) => void;
+  /** Current bottom-navigation tab, used to make directions contextual. */
+  currentSection: "listings" | "saved" | "areas" | "guide";
+  /** Current results or saved shortlist, used only for grounded comparisons. */
+  listings: ListingResult[];
 }) {
   const [open, setOpen] = useState(false);
   const [bubbles, setBubbles] = useState<Bubble[]>([{ role: "assistant", content: GREETING }]);
-  const [input, setInput] = useState("");
+  const [categoryId, setCategoryId] = useState<SiftQuestionCategoryId>("how_to");
   const [typing, setTyping] = useState(false);
   // index of the bubble currently being "streamed" + how much of it is shown
   const [streaming, setStreaming] = useState<{ index: number; shown: number } | null>(null);
@@ -77,10 +82,9 @@ export function SiftChat({
     });
   };
 
-  const send = async () => {
-    const text = input.trim();
-    if (!text || typing) return;
-    setInput("");
+  const send = async (question: string) => {
+    const text = question.trim();
+    if (!text || typing || streaming) return;
     const history: Bubble[] = [...bubbles, { role: "user", content: text }];
     setBubbles(history);
     setTyping(true);
@@ -89,21 +93,39 @@ export function SiftChat({
       const messages: ChatMessage[] = history
         .map(({ role, content }) => ({ role, content }))
         .slice(-12);
-      const res = await chat(messages, filtersSummary);
+      const listingContext: ChatListingContext[] = listings.slice(0, 8).map((listing) => ({
+        name: listing.name,
+        area: listing.area,
+        score: listing.score,
+        rent: listing.rent,
+        true_cost: listing.true_cost,
+        true_cost_incl_time: listing.true_cost_incl_time,
+        price_known: listing.price_known,
+        commute_min: listing.commute_min,
+        monthly_fare: listing.monthly_fare,
+        monthly_hours: listing.monthly_hours,
+        time_cost: listing.time_cost,
+        mode: listing.mode,
+        subscores: listing.subscores,
+        badge: listing.badge,
+        matched_amenities: listing.matched_amenities,
+      }));
+      const res = await chat(messages, filtersSummary, currentSection, listingContext);
       setTyping(false);
-      const chips = res.parsed.detected;
-      streamIn({ role: "assistant", content: res.reply, chips: chips.length ? chips : undefined });
-      if (chips.length) onDemands(res.parsed, text);
+      streamIn({ role: "assistant", content: res.reply });
     } catch {
       setTyping(false);
       streamIn({
         role: "assistant",
         content:
-          "I couldn't reach my brain just now 😅 — your words still work in the " +
-          "\"Anything else?\" box in Filters, or try me again in a moment.",
+          "I couldn't connect just now 😅. Please choose the question again in a moment.",
       });
     }
   };
+
+  const activeCategory =
+    SIFT_QUESTION_CATEGORIES.find((category) => category.id === categoryId)
+    ?? SIFT_QUESTION_CATEGORIES[0];
 
   return (
     <>
@@ -128,7 +150,7 @@ export function SiftChat({
       {/* chat panel */}
       {open && (
         <div
-          className="fixed bottom-36 right-4 z-40 w-[min(94vw,380px)] h-[min(65vh,520px)] sf-card p-0 flex flex-col overflow-hidden animate-sift-fade"
+          className="fixed bottom-36 right-4 z-40 w-[min(94vw,400px)] h-[min(72vh,600px)] sf-card p-0 flex flex-col overflow-hidden animate-sift-fade"
           role="dialog"
           aria-label="Sift chat"
         >
@@ -137,7 +159,7 @@ export function SiftChat({
             <div className="min-w-0">
               <p className="text-sm font-bold text-ink leading-tight">Sift</p>
               <p className="text-[11px] text-muted font-medium leading-tight">
-                your housing buddy — I set the filters for you
+                your SiftPlace guide — choose a fixed question
               </p>
             </div>
           </div>
@@ -159,18 +181,6 @@ export function SiftChat({
                     )}
                   >
                     {streamed}
-                    {b.chips && (!streaming || streaming.index !== i) && (
-                      <div className="mt-2 flex flex-wrap gap-1">
-                        {b.chips.map((c) => (
-                          <span
-                            key={c}
-                            className="px-2 py-0.5 rounded-full bg-ok-soft text-ok text-[10px] font-bold"
-                          >
-                            ✓ {c}
-                          </span>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 </div>
               );
@@ -190,28 +200,45 @@ export function SiftChat({
             )}
           </div>
 
-          <div className="flex items-center gap-2 px-3 py-3 border-t border-line bg-surface-low">
-            <input
-              className="sf-field flex-1 min-w-0 text-sm"
-              placeholder="quiet, near a gym, under ฿15k…"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void send();
-                }
-              }}
-            />
-            <button
-              type="button"
-              aria-label="Send"
-              onClick={() => void send()}
-              disabled={typing || !input.trim()}
-              className="sf-cta h-10 w-10 shrink-0 rounded-full flex items-center justify-center cursor-pointer disabled:opacity-50"
-            >
-              <Send className="h-4 w-4" />
-            </button>
+          <div className="shrink-0 border-t border-line bg-surface-low px-3 py-3">
+            <p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-muted">
+              Choose a question
+            </p>
+            <div className="mb-2 grid grid-cols-2 gap-1.5" role="tablist" aria-label="Question categories">
+              {SIFT_QUESTION_CATEGORIES.map((category) => {
+                const active = category.id === categoryId;
+                return (
+                  <button
+                    key={category.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setCategoryId(category.id)}
+                    className={cn(
+                      "rounded-xl px-2 py-2 text-[11px] font-bold transition cursor-pointer",
+                      active
+                        ? "bg-primary/25 text-ink"
+                        : "bg-lowest text-muted hover:bg-surface-c hover:text-ink",
+                    )}
+                  >
+                    {category.icon} {category.label}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="max-h-36 space-y-1.5 overflow-y-auto pr-1">
+              {activeCategory.questions.map((question) => (
+                <button
+                  key={question}
+                  type="button"
+                  disabled={typing || streaming !== null}
+                  onClick={() => void send(question)}
+                  className="w-full rounded-xl border border-line bg-lowest px-3 py-2 text-left text-xs font-semibold text-ink transition hover:bg-surface-c cursor-pointer disabled:cursor-wait disabled:opacity-50"
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       )}
