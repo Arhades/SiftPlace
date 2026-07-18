@@ -166,6 +166,29 @@ input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
   .sf-cta:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--primary-dim); }
   .sf-cta:disabled { opacity: .55; cursor: not-allowed; }
 
+  /* Secondary squishy CTA — warm/orange accent on a light face */
+  .sf-cta-orange {
+    background: var(--secondary); color: var(--on-secondary);
+    font-weight: 700; border-radius: 18px;
+    box-shadow: 0 5px 0 var(--secondary-dim);
+    transition: transform .08s, box-shadow .08s, filter .15s;
+  }
+  .sf-cta-orange:hover { filter: brightness(1.03); }
+  .sf-cta-orange:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--secondary-dim); }
+  .sf-cta-orange:disabled { opacity: .55; cursor: not-allowed; }
+
+  /* Ghost / outlined squishy button on a light face */
+  .sf-cta-ghost {
+    background: var(--lowest); color: var(--ink);
+    font-weight: 700; border-radius: 18px;
+    box-shadow: 0 5px 0 var(--line);
+    transition: transform .08s, box-shadow .08s;
+    border: 2px solid var(--line);
+  }
+  .sf-cta-ghost:hover { background: var(--surface-c); }
+  .sf-cta-ghost:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--line); }
+  .sf-cta-ghost:disabled { opacity: .5; cursor: not-allowed; }
+
   /* Pill text field */
   .sf-field {
     width: 100%; font-family: inherit; font-size: 15px; font-weight: 600;
