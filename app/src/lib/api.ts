@@ -210,7 +210,8 @@ export interface FloodRisk {
    *  null when the seasonal data was unavailable (season-only estimate). */
   heavy_rain_pct: number | null;
   elevation_m: number | null;
-  /** Legacy fields from the old 7-day-forecast model; daily is now empty. */
+  /** Live 7-day forecast: total rain, wettest day, and per-day rows
+   *  (empty when the forecast API was unavailable). */
   week_rain_mm: number;
   max_day_mm: number;
   daily: FloodDay[];

@@ -9,7 +9,7 @@ Endpoints:
     GET  /health              — sanity check
     GET  /rates               — daily-cached FX table (THB base) for the currency selector
     GET  /geocode?q=...       — place name -> coordinates (Nominatim, Photon fallback)
-    GET  /flood-risk?lat=&lon= — seasonal heavy-rain climatology + flood heuristic
+    GET  /flood-risk?lat=&lon= — climatology + 7-day forecast flood heuristic
     POST /parse               — free-text "anything else?" -> structured demands (NLP)
     POST /chat                — one Sift-mascot turn (Agnes AI -> OpenAI -> nlp.py chain)
     POST /score               — rank the bundled DEMO listings (mock Bangkok data)

@@ -1,4 +1,4 @@
-"""Seasonal flood-risk indicator from free open data (Open-Meteo, no API key).
+"""Weather + flood-risk indicator from free open data (Open-Meteo, no API key).
 
 Heuristic, deliberately rough and tunable: Bangkok floods when heavy monsoon
 rain meets low-lying ground. Points model (all thresholds live in CONFIG):
@@ -8,6 +8,9 @@ rain meets low-lying ground. Points model (all thresholds live in CONFIG):
   Heavy rain in month . share of the month's days expected to see heavy rain
                         (from monthly climatology), highest matching tier only:
                         >10% -> +1, >33% -> +2, >50% -> +3
+  Forecast rain ....... live 7-day forecast on top of the climatology baseline:
+                        wet week (>=60 mm) +1 or heavy week (>=140 mm) +2,
+                        plus +1 if any single day is an intense downpour
 
   Total points: 0-2 -> low, 3-5 -> moderate, 6+ -> high
 
@@ -15,7 +18,9 @@ rain meets low-lying ground. Points model (all thresholds live in CONFIG):
 we look at the same calendar month over the last few years and count the share
 of days whose rainfall crossed the heavy-day threshold. That climatology barely
 changes, so it is cached with a long TTL (coarse coordinate buckets) to respect
-the free API. If the data is unavailable we fall back to a season-only estimate.
+the free API. The 7-day forecast comes from Open-Meteo's forecast API and is
+cached for a few hours. If either source is unavailable the model degrades
+gracefully (down to a season-only estimate in the worst case).
 
 This is a rough screening signal for students, not a hydrological model.
 """
@@ -49,15 +54,22 @@ CONFIG = {
     "points_monsoon": 1,
     # elevation (m): low-lying ground drains poorly
     "low_elevation_m": 4,
+    # live 7-day forecast thresholds (mm) — extra points on top of climatology
+    "week_rain_moderate_mm": 60,    # 7-day total that starts to matter
+    "week_rain_high_mm": 140,       # 7-day total that means real flood watch
+    "day_rain_high_mm": 35,         # any single day above this = intense downpour
     # risk bands over total points
     "points_high": 6,       # 6+   -> high   ("Heavy")
     "points_moderate": 3,   # 3-5  -> moderate ("Medium")
     #                         0-2  -> low    ("Lowest")
+    # the blended result embeds a live forecast, so it can only live a few hours
+    "cache_ttl_s": 3 * 3600,
     # climatology changes on a decade scale; cache it for a month
-    "cache_ttl_s": 30 * 24 * 3600,
+    "climatology_cache_ttl_s": 30 * 24 * 3600,
 }
 
 ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
 ELEVATION_URL = "https://api.open-meteo.com/v1/elevation"
 
 _lock = threading.Lock()
@@ -114,7 +126,7 @@ def _heavy_rain_pct(lat: float, lon: float, month: int) -> float | None:
     now = time.time()
     with _lock:
         hit = _climatology_cache.get(key)
-        if hit and now - hit[0] < CONFIG["cache_ttl_s"]:
+        if hit and now - hit[0] < CONFIG["climatology_cache_ttl_s"]:
             monthly = hit[1]
             return monthly.get(month) if monthly else None
 
@@ -125,6 +137,54 @@ def _heavy_rain_pct(lat: float, lon: float, month: int) -> float | None:
         # hammering the API when it is down)
         _climatology_cache[key] = (now, monthly)
     return monthly.get(month) if monthly else None
+
+
+def _fetch_forecast(lat: float, lon: float) -> dict | None:
+    """Raw Open-Meteo daily forecast block for the next 7 days, or None."""
+    try:
+        count_api_call("open-meteo")
+        resp = requests.get(FORECAST_URL, params={
+            "latitude": lat, "longitude": lon,
+            "daily": "precipitation_sum,precipitation_probability_max",
+            "forecast_days": 7, "timezone": "auto",
+        }, timeout=12)
+        resp.raise_for_status()
+        return resp.json().get("daily") or None
+    except Exception:
+        return None
+
+
+def _forecast_points(daily: dict | None) -> tuple[int, list[str], list[dict], float, float]:
+    """(points, reasons, per-day rows, 7-day total mm, wettest day mm) from the
+    live forecast. Missing forecast costs no points — climatology still holds."""
+    if daily is None:
+        return 0, ["live forecast unavailable — climatology-only estimate"], [], 0.0, 0.0
+
+    days: list[dict] = []
+    week_rain = 0.0
+    max_day = 0.0
+    dates = daily.get("time") or []
+    sums = daily.get("precipitation_sum") or []
+    probs = daily.get("precipitation_probability_max") or []
+    for i, date_str in enumerate(dates):
+        rain = float(sums[i] or 0) if i < len(sums) else 0.0
+        prob = int(probs[i] or 0) if i < len(probs) else 0
+        days.append({"date": date_str, "rain_mm": round(rain, 1), "prob": prob})
+        week_rain += rain
+        max_day = max(max_day, rain)
+
+    points = 0
+    reasons: list[str] = []
+    if week_rain >= CONFIG["week_rain_high_mm"]:
+        points += 2
+        reasons.append(f"heavy rain forecast (~{round(week_rain)} mm over 7 days)")
+    elif week_rain >= CONFIG["week_rain_moderate_mm"]:
+        points += 1
+        reasons.append(f"wet week ahead (~{round(week_rain)} mm over 7 days)")
+    if max_day >= CONFIG["day_rain_high_mm"]:
+        points += 1
+        reasons.append(f"intense downpour expected (up to {round(max_day)} mm in a day)")
+    return points, reasons, days, round(week_rain, 1), round(max_day, 1)
 
 
 def _fetch_elevation(lat: float, lon: float) -> float | None:
@@ -160,13 +220,12 @@ def _heavy_rain_points(heavy_pct: float) -> tuple[int, str | None]:
 
 
 def flood_risk(lat: float, lon: float, month: int | None = None) -> dict:
-    """Blend season + monthly heavy-rain likelihood + elevation into a simple
-    low / moderate / high indicator.
+    """Blend season + monthly heavy-rain likelihood + live 7-day forecast +
+    elevation into a simple low / moderate / high indicator.
 
     Returns {risk, reasons[], season, month, heavy_rain_pct, elevation_m,
-             week_rain_mm, max_day_mm, daily, source}. The last three are
-    legacy fields kept so older clients don't break (no daily forecast is
-    fetched any more). Never raises — on any data failure this degrades to a
+             week_rain_mm, max_day_mm, daily: [{date, rain_mm, prob}], source}.
+    Never raises — on any data failure this degrades gracefully, down to a
     season-only estimate.
     """
     month = month or dt.date.today().month
@@ -178,6 +237,7 @@ def flood_risk(lat: float, lon: float, month: int | None = None) -> dict:
             return hit[1]
 
     heavy_pct = _heavy_rain_pct(lat, lon, month)
+    forecast = _fetch_forecast(lat, lon)
     elevation = _fetch_elevation(lat, lon)
 
     points = 0
@@ -200,6 +260,10 @@ def flood_risk(lat: float, lon: float, month: int | None = None) -> dict:
         if rain_reason:
             reasons.append(rain_reason)
 
+    forecast_pts, forecast_reasons, days, week_rain, max_day = _forecast_points(forecast)
+    points += forecast_pts
+    reasons.extend(forecast_reasons)
+
     if points >= CONFIG["points_high"]:
         risk = "high"
     elif points >= CONFIG["points_moderate"]:
@@ -216,12 +280,11 @@ def flood_risk(lat: float, lon: float, month: int | None = None) -> dict:
         "month": month,
         "heavy_rain_pct": heavy_pct,
         "elevation_m": elevation,
-        # legacy fields (pre-seasonal model) kept for response-shape compatibility
-        "week_rain_mm": 0.0,
-        "max_day_mm": 0.0,
-        "daily": [],
-        "source": "open-meteo.com monthly climatology (heuristic indicator, "
-                  "not a hydrological model)",
+        "week_rain_mm": week_rain,
+        "max_day_mm": max_day,
+        "daily": days,
+        "source": "open-meteo.com climatology + 7-day forecast (heuristic "
+                  "indicator, not a hydrological model)",
     }
     with _lock:
         _cache[cache_key] = (now, out)
