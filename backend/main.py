@@ -76,6 +76,7 @@ app = FastAPI(title="SiftPlace API", version="0.3.0")
 # to "*" re-opens everything (dev escape hatch only).
 _DEFAULT_ORIGINS = (
     "https://sift-place.vercel.app,"
+    "www.siftplace.com,"
     "http://localhost:5173,http://127.0.0.1:5173,"
     "http://localhost:4173,http://localhost:3000"
 )
