@@ -45,6 +45,7 @@ function Accordion({ items, keyPrefix }: { items: GuideItem[]; keyPrefix: string
 export function Guide() {
   return (
     <div className="space-y-6 animate-sift-fade">
+
       <div className="space-y-3">
         <p className="text-xs text-muted font-medium">
           Avoid the classic newcomer mistakes — SiftPlace's quick checklist.

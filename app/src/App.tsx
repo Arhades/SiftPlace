@@ -1,6 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { SlidersHorizontal, X } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import Landing from "@/components/Landing";
+import AuthModal from "@/components/AuthModal";
+import { supabase } from "@/lib/supabaseClient";
+import { 
+  fetchSavedListings, 
+  saveListingToCloud, 
+  deleteListingFromCloud, 
+  syncLocalSavesToCloud 
+} from "@/lib/savedListings";
 import {
   geocode,
   getFloodRisk,
@@ -77,6 +86,12 @@ function buildReq(
 }
 
 function App() {
+  const [view, setView] = useState<'landing' | 'app'>(() => {
+    const landed = sessionStorage.getItem("siftplace:landed");
+    return landed === "1" ? "app" : "landing";
+  });
+  const [session, setSession] = useState<any>(null);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
   const [intake, setIntake] = useState<IntakeValues>(defaultIntake);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -85,6 +100,53 @@ function App() {
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "";
   }, [dark]);
+
+  // Saved listings are stored in full (not just by name) so the Compare table
+  // works across searches and survives reloads.
+  const [saved, setSaved] = useState<Map<string, ListingResult>>(new Map());
+
+  // Auth & Sync Handling
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
+      setSession(currentSession);
+      if (currentSession) {
+        setView("app");
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, currentSession) => {
+      setSession(currentSession);
+      if (currentSession) {
+        setView("app");
+        // Sync local saves to cloud
+        try {
+          const localRaw = localStorage.getItem("siftplace:saved");
+          const localArr = localRaw ? (JSON.parse(localRaw) as ListingResult[]) : [];
+          if (localArr.length > 0) {
+            await syncLocalSavesToCloud(localArr);
+            localStorage.removeItem("siftplace:saved");
+          }
+          const cloudListings = await fetchSavedListings();
+          setSaved(new Map(cloudListings.map(l => [l.name, l])));
+        } catch (err) {
+          console.error("Sync failed:", err);
+        }
+      } else {
+        // Logged out: fallback to local storage
+        try {
+          const raw = localStorage.getItem("siftplace:saved");
+          const arr = raw ? (JSON.parse(raw) as ListingResult[]) : [];
+          setSaved(new Map(arr.map((l) => [l.name, l])));
+        } catch {
+          setSaved(new Map());
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   // FX table for displaying prices in the user's currency. On failure we keep
   // the labelled fallback table AND tell the user amounts are approximate —
@@ -148,33 +210,42 @@ function App() {
   };
   const isStale = (seq: number) => seq !== seqRef.current;
 
-  // Saved listings are stored in full (not just by name) so the Compare table
-  // works across searches and survives reloads. Persisted to localStorage.
-  const [saved, setSaved] = useState<Map<string, ListingResult>>(() => {
-    try {
-      const raw = localStorage.getItem("siftplace:saved");
-      const arr = raw ? (JSON.parse(raw) as ListingResult[]) : [];
-      return new Map(arr.map((l) => [l.name, l]));
-    } catch {
-      return new Map<string, ListingResult>();
-    }
-  });
-
-  useEffect(() => {
-    try {
-      localStorage.setItem("siftplace:saved", JSON.stringify([...saved.values()]));
-    } catch {
-      // ignore storage failures (private mode, quota)
-    }
-  }, [saved]);
-
-  const toggleSave = (l: ListingResult) =>
+  const toggleSave = async (l: ListingResult) => {
+    const hasListing = saved.has(l.name);
+    
     setSaved((prev) => {
       const next = new Map(prev);
       if (next.has(l.name)) next.delete(l.name);
       else next.set(l.name, l);
       return next;
     });
+
+    if (session) {
+      try {
+        if (hasListing) {
+          await deleteListingFromCloud(l.name);
+        } else {
+          await saveListingToCloud(l);
+        }
+      } catch (err) {
+        console.error("Cloud toggle save failed:", err);
+      }
+    } else {
+      try {
+        const raw = localStorage.getItem("siftplace:saved");
+        const arr = raw ? (JSON.parse(raw) as ListingResult[]) : [];
+        let nextArr;
+        if (hasListing) {
+          nextArr = arr.filter((x: ListingResult) => x.name !== l.name);
+        } else {
+          nextArr = [...arr, l];
+        }
+        localStorage.setItem("siftplace:saved", JSON.stringify(nextArr));
+      } catch {
+        // ignore storage errors
+      }
+    }
+  };
 
   const runSearch = async (
     req: SearchRequest,
@@ -362,6 +433,30 @@ function App() {
   const savedNames = new Set(saved.keys());
   const savedItems = [...saved.values()];
 
+  if (view === "landing") {
+    return (
+      <>
+        <Landing 
+          onGuest={() => {
+            sessionStorage.setItem("siftplace:landed", "1");
+            setView("app");
+          }} 
+          onLogin={() => setAuthModalOpen(true)}
+          dark={dark}
+          setDark={setDark}
+        />
+        <AuthModal
+          isOpen={authModalOpen}
+          onClose={() => setAuthModalOpen(false)}
+          onSuccess={() => {
+            setAuthModalOpen(false);
+            setView("app");
+          }}
+        />
+      </>
+    );
+  }
+
   return (
     <div className="min-h-screen text-ink">
       {/* ambient background */}
@@ -372,7 +467,13 @@ function App() {
       <div className="flex flex-col min-h-screen">
         <header className="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md">
           <div className="max-w-5xl mx-auto flex items-center justify-between px-5 py-3">
-            <span className="flex items-center gap-2">
+            <span 
+              onClick={() => {
+                setTab("listings");
+                window.scrollTo(0, 0);
+              }} 
+              className="flex items-center gap-2 cursor-pointer hover:opacity-85 transition"
+            >
               <Logo size={38} />
               <span className="font-bold text-lg tracking-tight text-primary-dim">SiftPlace</span>
             </span>
@@ -385,6 +486,30 @@ function App() {
               >
                 {dark ? "☀️" : "🌙"}
               </button>
+              {session ? (
+                <div className="flex items-center gap-2">
+                  <span className="hidden md:inline text-[11px] font-bold text-muted bg-surface-low border border-line px-2.5 py-1 rounded-full">
+                    👤 {session.user?.email}
+                  </span>
+                  <button
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      sessionStorage.removeItem("siftplace:landed");
+                      setView("landing");
+                    }}
+                    className="px-3 py-2 rounded-full border-2 border-line bg-lowest text-ink text-xs font-bold hover:bg-surface-c transition cursor-pointer"
+                  >
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  className="px-3.5 py-2 rounded-full border-2 border-line bg-lowest text-ink text-xs font-bold hover:bg-surface-c transition cursor-pointer"
+                >
+                  Sign In
+                </button>
+              )}
               {tab === "listings" && (
                 <button
                   onClick={openFilter}
@@ -462,6 +587,16 @@ function App() {
           <Intake initial={intake} onSubmit={applyFilters} />
         </div>
       )}
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        onSuccess={() => {
+          setAuthModalOpen(false);
+          setView("app");
+        }}
+      />
     </div>
   );
 }
