@@ -36,6 +36,10 @@ const base = {
   badge: null as ListingResult["badge"],
 };
 
+/** The Siam/Chula anchor the featured fares were computed against — [lat, lon].
+ *  Also the spot the weather/flood card covers on the instant first screen. */
+export const FEATURED_CENTRE: [number, number] = [13.7455, 100.5331];
+
 export const FEATURED_NOTE =
   "Curated starter picks for central Bangkok with estimated prices — run a search " +
   "(Filter, or ask Sift) to see live places ranked for YOUR priorities.";

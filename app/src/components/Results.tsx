@@ -28,6 +28,7 @@ export function Results({
   mode,
   context,
   flood,
+  floodScope,
   savedNames,
   onToggleSave,
   onChangeMode,
@@ -42,6 +43,7 @@ export function Results({
   mode: CommuteMode;
   context: ResultsContext;
   flood: FloodRisk | null;
+  floodScope: "stay" | "quarter";
   savedNames: Set<string>;
   onToggleSave: (listing: ListingResult) => void;
   onChangeMode: (m: CommuteMode) => void;
@@ -63,6 +65,9 @@ export function Results({
 
   return (
     <div className="space-y-4">
+      {/* per-month flood risk for the area — always at the top of the page */}
+      {flood && <FloodCard flood={flood} rainySeason={context.rainySeason} scope={floodScope} />}
+
       {/* context header */}
       <div>
         <h2 className="text-xl font-bold text-ink">{title}</h2>
@@ -126,9 +131,6 @@ export function Results({
           ))}
         </div>
       </div>
-
-      {/* weather + flood risk for the searched area */}
-      {flood && <FloodCard flood={flood} rainySeason={context.rainySeason} />}
 
       {tradeOff && (
         <TradeOffCallout data={tradeOff} mode={mode} commuteDays={context.commuteDays} />

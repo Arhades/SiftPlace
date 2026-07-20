@@ -9,7 +9,7 @@ Endpoints:
     GET  /health              — sanity check
     GET  /rates               — daily-cached FX table (THB base) for the currency selector
     GET  /geocode?q=...       — place name -> coordinates (Nominatim, Photon fallback)
-    GET  /flood-risk?lat=&lon= — climatology + 7-day forecast flood heuristic
+    GET  /flood-risk?lat=&lon=&months= — per-month flood heuristic (climatology)
     POST /parse               — free-text "anything else?" -> structured demands (NLP)
     POST /chat                — one Sift-mascot turn (Agnes AI -> OpenAI -> nlp.py chain)
     POST /score               — rank the bundled DEMO listings (mock Bangkok data)
@@ -167,9 +167,16 @@ def geocode_endpoint(request: Request, q: str):
 
 
 @app.get("/flood-risk")
-def flood_endpoint(lat: float, lon: float):
-    """Seasonal heavy-rain likelihood + heuristic flood indicator (open data, cached)."""
-    return flood_risk(lat, lon)
+def flood_endpoint(lat: float, lon: float, months: str | None = None):
+    """Per-month flood indicator (open data, cached). `months` is a CSV of
+    calendar months 1-12 (the user's stay months); omitted -> next quarter."""
+    parsed: list[int] = []
+    for part in (months or "").split(","):
+        try:
+            parsed.append(int(part))
+        except ValueError:
+            continue
+    return flood_risk(lat, lon, parsed or None)
 
 
 @app.post("/parse")

@@ -80,15 +80,18 @@ export interface AreaCard {
   safety: number; // out of 10
   rent: number;
   good: string;
+  /** Neighbourhood centre (approx. BTS/MRT station) for the flood-risk lookup. */
+  lat: number;
+  lon: number;
 }
 
 export const AREAS: AreaCard[] = [
-  { name: "Ari", emoji: "🌿", vibe: "Quiet & leafy", safety: 8, rent: 16000, good: "Cafés · young pros" },
-  { name: "Samyan", emoji: "📚", vibe: "Campus core", safety: 8, rent: 14000, good: "Next to campus" },
-  { name: "Ratchathewi", emoji: "🎓", vibe: "Student-friendly", safety: 6, rent: 15000, good: "Walk to centre" },
-  { name: "Sathorn", emoji: "🏙️", vibe: "Business calm", safety: 8, rent: 11000, good: "CBD · metro" },
-  { name: "Phrom Phong", emoji: "🛍️", vibe: "Central & social", safety: 8, rent: 8000, good: "Malls · hostels" },
-  { name: "Thong Lo", emoji: "✨", vibe: "Lively nightlife", safety: 10, rent: 32000, good: "Expats · dining" },
+  { name: "Ari", emoji: "🌿", vibe: "Quiet & leafy", safety: 8, rent: 16000, good: "Cafés · young pros", lat: 13.7797, lon: 100.5427 },
+  { name: "Samyan", emoji: "📚", vibe: "Campus core", safety: 8, rent: 14000, good: "Next to campus", lat: 13.7326, lon: 100.5296 },
+  { name: "Ratchathewi", emoji: "🎓", vibe: "Student-friendly", safety: 6, rent: 15000, good: "Walk to centre", lat: 13.7519, lon: 100.5316 },
+  { name: "Sathorn", emoji: "🏙️", vibe: "Business calm", safety: 8, rent: 11000, good: "CBD · metro", lat: 13.7212, lon: 100.5262 },
+  { name: "Phrom Phong", emoji: "🛍️", vibe: "Central & social", safety: 8, rent: 8000, good: "Malls · hostels", lat: 13.7305, lon: 100.5697 },
+  { name: "Thong Lo", emoji: "✨", vibe: "Lively nightlife", safety: 10, rent: 32000, good: "Expats · dining", lat: 13.7243, lon: 100.5783 },
 ];
 
 export interface GuideItem {

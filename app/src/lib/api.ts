@@ -192,29 +192,26 @@ export interface RatesResponse {
   source: string;
 }
 
-export interface FloodDay {
-  date: string;
-  rain_mm: number;
-  prob: number;
-}
-
 export type FloodRiskLevel = "low" | "moderate" | "high";
 
-export interface FloodRisk {
+export interface FloodMonthRisk {
+  /** Calendar month, 1-12. */
+  month: number;
   risk: FloodRiskLevel;
-  reasons: string[];
-  season: "peak" | "monsoon" | "dry";
-  /** Which calendar month (1-12) the seasonal estimate is for. */
-  month?: number;
   /** Share (%) of the month's days expected to see heavy rain (climatology);
    *  null when the seasonal data was unavailable (season-only estimate). */
   heavy_rain_pct: number | null;
+  reasons: string[];
+}
+
+export interface FloodRisk {
+  /** Worst month's risk across the assessed months. */
+  risk: FloodRiskLevel;
+  /** Area-wide notes (elevation, data gaps). */
+  reasons: string[];
+  /** One assessment per requested calendar month, in request order. */
+  months: FloodMonthRisk[];
   elevation_m: number | null;
-  /** Live 7-day forecast: total rain, wettest day, and per-day rows
-   *  (empty when the forecast API was unavailable). */
-  week_rain_mm: number;
-  max_day_mm: number;
-  daily: FloodDay[];
   source: string;
 }
 
@@ -317,8 +314,16 @@ export function deleteStoredNote(text: string): Promise<{ deleted_rows: number }
   });
 }
 
-export function getFloodRisk(lat: number, lon: number, signal?: AbortSignal): Promise<FloodRisk> {
-  return request(`/flood-risk?lat=${lat}&lon=${lon}`, { signal });
+/** Per-month flood risk for the given calendar months (1-12) — the user's
+ *  stay months, or omitted to let the backend default to the next quarter. */
+export function getFloodRisk(
+  lat: number,
+  lon: number,
+  months?: number[],
+  signal?: AbortSignal,
+): Promise<FloodRisk> {
+  const monthsParam = months && months.length > 0 ? `&months=${months.join(",")}` : "";
+  return request(`/flood-risk?lat=${lat}&lon=${lon}${monthsParam}`, { signal });
 }
 
 export { API as API_BASE };

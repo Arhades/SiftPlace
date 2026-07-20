@@ -23,8 +23,8 @@ import {
 } from "@/lib/api";
 import { setRates } from "@/lib/currency";
 import { withMode } from "@/lib/fare";
-import { staySpansRainySeason } from "@/lib/utils";
-import { FEATURED_LISTINGS, FEATURED_NOTE } from "@/data/featured";
+import { nextQuarterMonths, stayMonthsList, staySpansRainySeason } from "@/lib/utils";
+import { FEATURED_CENTRE, FEATURED_LISTINGS, FEATURED_NOTE } from "@/data/featured";
 import { Intake, defaultIntake, type IntakeValues } from "@/components/Intake";
 import { Results, type ResultsContext } from "@/components/Results";
 import { Saved } from "@/components/Saved";
@@ -171,6 +171,8 @@ function App() {
   const [errorMsg, setErrorMsg] = useState("");
   const [geoFailedMsg, setGeoFailedMsg] = useState<string | null>(null);
   const [flood, setFlood] = useState<FloodRisk | null>(null);
+  // whether the flood card covers the user's stay months or the next quarter
+  const [floodScope, setFloodScope] = useState<"stay" | "quarter">("quarter");
   const [ctx, setCtx] = useState<ResultsContext>({
     city: "Bangkok", dest: "", budget: 20000, currency: "THB", commuteDays: 5,
     rainySeason: false, stayMonths: null, radiusUsed: null, parsed: null,
@@ -209,6 +211,19 @@ function App() {
     return { seq, signal: controller.signal };
   };
   const isStale = (seq: number) => seq !== seqRef.current;
+
+  // Flood risk for the instant featured screen: the curated picks are all
+  // around the Siam/Chula anchor, so fetch that area's next-quarter card once
+  // on mount (best effort). A real search replaces it with the searched area's.
+  useEffect(() => {
+    const seqAtMount = seqRef.current;
+    getFloodRisk(FEATURED_CENTRE[0], FEATURED_CENTRE[1], nextQuarterMonths())
+      .then((f) => {
+        // a search started meanwhile owns the card now — don't overwrite it
+        if (seqRef.current === seqAtMount) setFlood(f);
+      })
+      .catch(() => {});
+  }, []);
 
   const toggleSave = async (l: ListingResult) => {
     const hasListing = saved.has(l.name);
@@ -280,10 +295,15 @@ function App() {
       }));
       setStatus(res.results.length === 0 ? "empty" : "ok");
       if (res.centre) {
-        // weather + flood risk for the searched area (non-blocking, best effort)
-        getFloodRisk(res.centre[0], res.centre[1], signal)
+        // per-month flood risk for the searched area (non-blocking, best
+        // effort): the user's stay months, or the next quarter without dates
+        const stayMonths = stayMonthsList(req.check_in ?? "", req.check_out ?? "");
+        getFloodRisk(res.centre[0], res.centre[1], stayMonths ?? nextQuarterMonths(), signal)
           .then((f) => {
-            if (!isStale(seq)) setFlood(f);
+            if (!isStale(seq)) {
+              setFlood(f);
+              setFloodScope(stayMonths ? "stay" : "quarter");
+            }
           })
           .catch(() => {});
       }
@@ -546,6 +566,7 @@ function App() {
                 mode={intake.mode}
                 context={ctx}
                 flood={flood}
+                floodScope={floodScope}
                 savedNames={savedNames}
                 onToggleSave={toggleSave}
                 onChangeMode={changeMode}
@@ -559,7 +580,12 @@ function App() {
 
           {tab === "saved" && <Saved items={savedItems} onToggleSave={toggleSave} currency={ctx.currency} />}
           {tab === "areas" && (
-            <Areas savedNames={savedNames} onToggleSave={toggleSave} currency={ctx.currency} />
+            <Areas
+              savedNames={savedNames}
+              onToggleSave={toggleSave}
+              currency={ctx.currency}
+              floodMonths={stayMonthsList(intake.checkIn, intake.checkOut) ?? nextQuarterMonths()}
+            />
           )}
           {tab === "guide" && <Guide />}
         </main>

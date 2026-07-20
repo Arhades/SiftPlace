@@ -1,25 +1,59 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowLeft, ChevronRight } from "lucide-react";
-import type { ListingResult } from "@/lib/api";
+import { getFloodRisk, type FloodRisk, type ListingResult } from "@/lib/api";
 import { AREAS, type AreaCard } from "@/lib/constants";
 import { fmtTHB } from "@/lib/fare";
 import { AREA_LISTINGS } from "@/data/areaListings";
+import { FloodMonthChips } from "./FloodCard";
 import { ResultCard } from "./ResultCard";
 
 // Neighbourhood explorer: the glance list, plus a click-through per area with
 // its top popular listings — same card formatting as search results, minus the
 // cost/location/living metrics (no query to score against while browsing).
 
+// Per-area flood risk survives tab switches: the backend caches by coordinate
+// bucket, but this also skips re-render churn and repeat HTTP round trips.
+const floodCache = new Map<string, FloodRisk>();
+
 export function Areas({
   savedNames,
   onToggleSave,
   currency = "THB",
+  floodMonths,
 }: {
   savedNames?: Set<string>;
   onToggleSave?: (listing: ListingResult) => void;
   currency?: string;
+  /** Calendar months (1-12) the flood chips cover — the user's stay months,
+   *  or the next quarter without dates. */
+  floodMonths: number[];
 }) {
   const [selected, setSelected] = useState<AreaCard | null>(null);
+
+  // per-month flood risk under every area (best effort — no chips on failure)
+  const [floods, setFloods] = useState<Record<string, FloodRisk>>({});
+  const monthsKey = floodMonths.join(",");
+  useEffect(() => {
+    let cancelled = false;
+    AREAS.forEach((a) => {
+      const key = `${a.name}:${monthsKey}`;
+      const hit = floodCache.get(key);
+      if (hit) {
+        setFloods((p) => (p[a.name] === hit ? p : { ...p, [a.name]: hit }));
+        return;
+      }
+      getFloodRisk(a.lat, a.lon, floodMonths)
+        .then((f) => {
+          floodCache.set(key, f);
+          if (!cancelled) setFloods((p) => ({ ...p, [a.name]: f }));
+        })
+        .catch(() => {});
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [monthsKey]);
 
   if (selected) {
     const picks = AREA_LISTINGS[selected.name] ?? [];
@@ -51,6 +85,11 @@ export function Areas({
                 Avg {fmtTHB(selected.rent)}/mo
               </span>
             </div>
+            {floods[selected.name] && (
+              <div className="mt-2">
+                <FloodMonthChips flood={floods[selected.name]} />
+              </div>
+            )}
           </div>
         </div>
 
@@ -112,6 +151,11 @@ export function Areas({
                 Avg {fmtTHB(a.rent)}/mo
               </span>
             </div>
+            {floods[a.name] && (
+              <div className="mt-2">
+                <FloodMonthChips flood={floods[a.name]} />
+              </div>
+            )}
           </div>
           <ChevronRight className="h-4 w-4 text-muted shrink-0" />
         </button>
