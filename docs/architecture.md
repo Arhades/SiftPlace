@@ -1,3 +1,4 @@
+
 # SiftPlace — architecture
 
 How the pieces connect. The frontend never computes matches itself — it calls

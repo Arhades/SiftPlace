@@ -1,156 +1,148 @@
-# Product Requirements Document (PRD): Bangkok Student Housing Matcher
+# Product Requirements Document (PRD): SiftPlace — Bangkok Student Housing Matcher
 
-**Status:** Idea Validation Phase  
-**Target Market:** International Exchange & Internship Students in Bangkok  
-**Author:** Manus AI (Collaborating with Founder)  
-**Date:** June 25, 2026
+**Status:** Live product (built & shipping) · validated with early users
+**Target Market:** International Exchange & Internship Students in Bangkok
+**Author:** SiftPlace Founding Team
+**Date:** 9 July 2026
+**Live:** https://sift-place.vercel.app/
 
 ---
 
 ## 1. Executive Summary
 
-The **Bangkok Student Housing Matcher** is a specialized "decision-layer" SaaS designed to solve the high-stakes problem of choosing accommodation in a foreign, sprawling city. Unlike traditional booking platforms (such as Airbnb or Agoda) that optimize purely for transactions and inventory display, this tool focuses on **personalized matching** through a multi-criteria weighted-scoring engine. 
+**SiftPlace** is a "decision-layer" web app that helps people moving to an unfamiliar city decide *where* to live by matching accommodation to their personal priorities, rather than only to a property's listed features. It sits **on top of existing listings** as a convenience layer that does the thinking Airbnb, Agoda and Booking leave to the user.
 
-It is built specifically to help international students and interns find the perfect 3–6 month stay by prioritizing the factors that actually dictate quality of life in Bangkok: true commute costs, hyper-local street accessibility, and specific room conditions (like the presence of a study desk) that are often hidden in listing photos. The product acts as a smart filter, doing the heavy lifting for users who lack the local knowledge to evaluate a neighborhood themselves.
+The product is **built and live**, not a concept. A React PWA (front end) backed by a Python FastAPI engine ranks candidate homes with a multi-criteria weighted-scoring algorithm and, crucially, surfaces the one number incumbents hide: the **true monthly cost** — rent **plus the commute** (fare *and* hours on the road). Around that core we have shipped lease-type filtering, a cost-of-living breakdown, community reviews and scam reporting, live affiliate monetization, and crash reporting. A conversational "Sift" mascot and semantic search are the next (competition) build.
+
+The wedge is deliberately sharp: international students on a 3–6 month exchange or internship in Bangkok, who face a high-stakes, unfamiliar, anxiety-inducing housing decision and currently fall back on group chats and guesswork.
 
 ---
 
 ## 2. Problem Statement & Origin
 
-The idea originated from the founder's own painful experience of choosing accommodation in Thailand and regretting the choice. Picking a place in an unfamiliar city is fraught with hidden variables. 
+The idea came from the founder's own costly accommodation mistake abroad. Choosing a place in an unfamiliar, sprawling city is full of hidden variables.
 
-### The Core Pain Points
+### Core pain points
 
-*   **Information Asymmetry:** Students do not know which "Sois" (streets) are prone to flooding, which areas are genuinely walkable, or where the nearest "Win" (motorbike taxi) stand is located. A street that looks central on a map might be a nightmare to navigate during rush hour.
-*   **The "3-6 Month" Inventory Gap:** Most condominiums in Bangkok legally require 1-year leases. Conversely, Airbnb is expensive and often legally restricted for stays under 30 days. The "sweet spot" for students is the serviced apartment or monthly rental market, which is highly fragmented.
-*   **Hidden Commute Costs:** A "cheap" apartment located 5 kilometers from a BTS station might ultimately cost more in daily Grab or taxi fees—and consume hours of daily traffic—than a slightly more expensive, centrally located apartment.
-*   **Search Fatigue & Binary Filters:** Existing platforms use binary filters (e.g., "Has Gym: Yes/No"). Users cannot express nuanced preferences, such as "I care *mostly* about cost, but I am *somewhat* willing to pay more for a quiet street and a good desk." Consequently, most people fall back on asking for free advice in group chats or forums.
+*   **Filters describe the property, not the lived experience.** Incumbents filter on what a place *has* (pool, wifi) plus a few landmarks. They cannot tell you whether the street is quiet, walkable, safe at night, or near a real gym or supermarket.
+*   **The "true cost" of a location is hidden.** A cheap room far from campus quietly costs more in daily transport money — and in *time*. Students optimise on rent and get blindsided by the commute. A "cheap" ฿8,000 room can carry 6+ hours/month on the road and hundreds in fares.
+*   **The 3–6 month inventory gap.** Most Bangkok condos require 1-year leases; Airbnb is expensive and legally restricted under 30 days. The student sweet spot — serviced apartments and monthly/agent-managed rentals — is highly fragmented and barely indexed by Booking/Agoda.
+*   **Decisive information lives only in reviews.** Street conditions, hidden-gem gyms, flea markets and pest issues (cockroaches and mice are common in some units) are readable only by trawling dozens of reviews.
+*   **Binary filters and search fatigue.** Users cannot express nuance like "I care *mostly* about cost, but I'll pay a bit more for a quiet street and a real desk." So they repeat the search dozens of times, or ask a group chat for free.
 
 ---
 
 ## 3. Target Audience & Market Landscape
 
-### Target User Persona
-The initial focus is strictly on **students going abroad on exchange or internship in Bangkok**. 
+### Target persona
+International students on **exchange or internship in Bangkok** (the beachhead).
 
-*   **Why this wedge is strong:** 
-    *   They stay for 3–6 months; a bad choice is a costly mistake, making a good match highly valuable.
-    *   They are often abroad alone for the first time and genuinely lack the context to judge a neighborhood.
-    *   They are budget-conscious, making the "true cost" factor central to their decision-making.
-    *   They cluster in highly findable channels (e.g., university buddy groups, internship program chats, r/Bangkok, expat Facebook groups).
+*   Stay 3–6 months; a bad choice is a costly, hard-to-undo mistake — so a good match is highly valuable.
+*   Often abroad alone for the first time; genuinely lack the context to judge a neighbourhood.
+*   Budget-conscious, which makes the **true-cost** factor central.
+*   Cluster in reachable, *renewing* channels: university exchange cohorts, internship programmes, r/Bangkok, expat/student groups.
 
-### Market Landscape & Differentiation
-The broad "AI hotel finder" category is crowded with tools like iMean, DealswithAI, and Wonderplan. However, these tools focus on short-term tourism. 
-
-**The Gap:** No existing tool combines explicit user-set weights with hyper-local factors (e.g., walkability, proximity to a martial arts gym, external accessibility) into a single ranking for medium-term stays. 
-
-**The Real Competitor:** The actual competitor is not another app; it is "ask ChatGPT" or "ask the group chat for free." The product must provide a faster, more accurate, and more convenient experience than free human advice.
+### Landscape & differentiation
+The broad "AI hotel finder" space (short-term tourism tools) is crowded but aimed elsewhere. **The gap:** no tool combines explicit user-set weights with hyper-local factors — street vibe, walkability, gym/supermarket/transit proximity, and true commute cost (money *and* time) — into one ranked answer for medium-term stays. **The real competitor** is "ask ChatGPT" or "ask the group chat for free"; SiftPlace must be faster, more accurate and more convenient than free human advice, with an opinionated, data-backed pick rather than a database.
 
 ---
 
 ## 4. Product Vision & Value Proposition
 
-**Vision:** To serve as the "trusted local friend" who processes complex urban data to make housing decisions effortless for newcomers.
+**Vision:** the "trusted local friend" that processes complex urban data to make housing decisions effortless for newcomers.
 
-**Value Proposition:** "Stop guessing. Find a home in Bangkok that fits your life, your commute, and your budget—powered by local data and smart matching."
+**Value proposition:** *"See the true monthly cost — not just the rent. Know before you commit."*
 
-**Positioning Statement:** The goal of the app is not to reinvent the house-listing market, but to sit on top of existing listings as a convenience layer that does the thinking Airbnb leaves to the user.
+**Positioning:** not another listing site — a decision layer on top of existing listings that does the thinking for you.
+
+**Two product forms, one engine.**
+*   **Form A — Web app (live).** Set your priorities, get a ranked shortlist. Works on any device; PWA-installable. Our current product and validation vehicle.
+*   **Form B — Browser extension (later).** Overlays SiftPlace scores directly onto Airbnb/Booking/Agoda pages — reading listing data from the page the user already opened, which sidesteps the lack of a public listings API.
 
 ---
 
 ## 5. Core Features & Functionality
 
-The product will be rolled out in phases, starting with a manual concierge service to validate demand, followed by an automated MVP.
+### Shipped and live today
 
-### Phase 1: MVP (The "Smart Engine")
-
-The MVP focuses on the core weighted-scoring algorithm and the most critical local data points.
-
-| Feature | Description | Priority |
+| Feature | Description | Status |
 | :--- | :--- | :--- |
-| **Weighted Intake Form** | A Typeform-style interface where users assign weights (0-100%) to three top-level factors: Cost, Location (sub-factors: near transit, quiet vs. lively), and Living Conditions (amenities, space). | P0 |
-| **Real-Cost Commute Calculator** | Calculates the true monthly cost of living by factoring in commute frequency and mode. Users can select their preferred "Commute Style" (e.g., BTS/MRT only, Motorbike Taxi, Grab) to calculate real time and financial cost. | P0 |
-| **External Accessibility Score** | Scores listings based on how easy it is to leave the Soi and access outside facilities. This includes walking distance to main roads, 7-Elevens (a proxy for safety and convenience), and supermarkets. | P1 |
-| **Map-Based Verification** | After receiving their top recommendations, users are presented with an interactive map view to verify the location, nearby amenities, and street layout themselves. | P1 |
+| **Weighted intake** | Users spend a 20-point budget across **Cost / Location / Living**, plus nearby wants (24/7 supermarket, gym/martial-arts, mall, flea market, transit) and quiet-vs-lively vibe. Explainable sub-scores combine into a 0–100 match. | Live |
+| **True Monthly Cost + Time Cost** | The headline. Ranks homes by **rent + commute fare + hours on the road**, per commute mode (Grab/Bolt car, motorbike taxi, transit, walk). Shows a **distance trade-off** callout and break-even ("living closer saves ฿X/mo and Y hours"). | Live |
+| **Hyper-local place data** | Nearby POIs and distances from OpenStreetMap/Overpass; geocoding via Nominatim — real names and coordinates at zero per-request cost. | Live |
+| **Lease-type filter** | Filter by standard (12mo) / short-term (3–6mo) / monthly rolling, with a "confirm visa requirements with the landlord" note. | Live |
+| **Cost-of-living breakdown** | A "what else you'll spend" panel per listing (utilities, internet, mobile, food) from open-data estimates, tuned over time. | Live |
+| **Community reviews & scam reporting** | Every listing is clickable → detail panel showing how many students viewed it, a 👍/👎 accuracy rating with an optional scam report (auto-flag at 3+ negatives), and a student comments space. Backed by Supabase. | Live |
+| **Flood-risk & seasonality** | Blends seasonal rainfall, the Sep–Oct rainy window and elevation into a low/moderate/high flood flag (free Open-Meteo data). | Live |
+| **Free-text "Anything else?" NLP** | Extracts structured demands from plain-language notes via an editable keyword bag-of-words **plus a trained multi-label classifier** (Porter-stemmed → Naive Bayes/MLP), improved by founder-labelled notes each week. | Live |
+| **Areas explorer** | Each neighbourhood opens to its top popular listings for a fast browse. | Live |
+| **Instant defaults** | First visit shows curated "Popular in Bangkok" listings with zero API calls, so the app never opens on a spinner. | Live |
+| **Crash / problem reporting** | A "report this problem" button plus an automatic uncaught-crash reporter to Supabase (survives the backend being down); email fallback. | Live |
 
-### Phase 2: The "AI" & Convenience Layer (Differentiation)
+### Next build — the "creative AI" layer (competition, ~1 month)
 
-Once the core engine is validated, the product will introduce advanced features to widen the moat.
-
-| Feature | Description | Priority |
+| Feature | Description | Status |
 | :--- | :--- | :--- |
-| **Photo Amenity Detection (CV)** | Uses Computer Vision to scan listing photos and detect valuable features rarely tagged in text descriptions, such as a usable study desk, natural light, or specific room conditions. | P2 |
-| **Street-Vibe NLP** | Mines reviews and forum data using NLP to tag streets with hyper-local vibes (e.g., "Digital Nomad Hub," "Street Food Heaven," "Expat Bubble"). | P2 |
-| **Flood-Risk & Seasonality Score** | Integrates historical weather and elevation data to warn users if a specific Soi is prone to severe flooding during Bangkok's rainy season (September/October). | P3 |
-| **Scam Prevention Guide** | A localized, integrated guide advising students on how to safely pay deposits and verify landlords, addressing a major anxiety point for first-time renters in Thailand. | P3 |
+| **"Sift" mascot chatbot** | A friendly mascot (hovering avatar) that (a) converses to set the filters — replacing much of the long form — and (b) acts as a **Bangkok housing concierge** answering neighbourhood questions and what to look out for. Powered by **Agnes AI** (competition criterion), with OpenAI and the local NLP as fallbacks. | Building |
+| **Semantic search on GMI Cloud** | Host an embedding model on the competition's Nvidia GPU credits; vector-search listings and LLM-rerank/explain in the user's own words. | Building |
+| **3×2 results grid** | Paginated, scannable grid replacing the long list. | Building |
+| **Roommate Match (experiment)** | Let solo students find compatible flatmates to co-rent larger units (lightweight profiles + preferences). | Planned |
+| **Photo amenity detection (CV)** | Detect a usable study desk, natural light, etc. from listing photos — the ML/CV showcase. | Later |
 
 ---
 
 ## 6. Technical Architecture & Data Strategy
 
-The technical approach prioritizes free or low-cost APIs to maintain sustainable unit economics during the early stages.
+Prioritises free or low-cost APIs to keep unit economics sustainable early.
 
-### Data Sources
-*   **Proximity & Routing Data:** OpenStreetMap (OSM) and Overpass API. This provides free, no-per-request billing for locating gyms, supermarkets, transit, and calculating commute routes.
-*   **Inventory Data:** 
-    *   *Initial Focus:* RentHub.in.th (the dominant local platform for monthly rentals and serviced apartments). Data will need to be aggregated carefully, prioritizing properties known to accept 3-6 month leases.
-    *   *Secondary:* Travelpayouts affiliate API for hotel/serviced apartment inventory.
-*   **Street-Vibe Labels:** NLP applied over reviews and forums (e.g., r/Bangkok, ASEAN Now), curated manually in the early stages.
+**Stack.** Front end: React 19 + TypeScript + Vite + Tailwind, PWA, deployed on Vercel. Back end: Python FastAPI (Render/Fly). Community & telemetry data: Supabase. NLP: NLTK + scikit-learn.
 
-### System Architecture
-*   **Matching Engine:** A multi-criteria weighted-scoring algorithm (e.g., Euclidean distance or linear scoring: `Score = Σ (Weight * NormalizedFactor)`). No LLM is needed for the v1 matching logic.
-*   **Frontend:** A lightweight web application (React/Next.js) optimized for mobile, as students primarily browse on their phones.
-*   **Hosting:** Vercel or Netlify (free tiers) combined with Formspree or Google Forms for initial intake.
+**Data sources.**
+*   **Proximity & routing:** OpenStreetMap / Overpass (free, no per-request billing) for gyms, supermarkets, transit and distances; Nominatim for geocoding; Open-Meteo for flood/seasonality.
+*   **Priced inventory:** Travelpayouts (aggregating Booking/Agoda), Agoda, Hotelbeds (sandbox), later Expedia — merged with OSM via a pluggable provider layer.
+*   **Agent-managed / monthly inventory (the gap):** **in discussion with Horganize**, an agent network with contacts across many Bangkok condo/apartment agents — precisely the fragmented monthly stock that Booking/Agoda don't cover, and a route to a real inventory moat.
+*   **Street-vibe labels:** seeded manually for Bangkok (founder in-market), enriched by every user input and the community reviews layer.
+
+**Matching engine.** Multi-criteria weighted scoring (`Score = Σ weight × normalized_factor`), with a "true cost" overlay (fare model) and explainable per-listing sub-scores. No LLM is required for v1 matching; LLMs power the conversational and semantic layers.
+
+**Monetization plumbing.** Affiliate commission is **live**: pre-departure checklist and booking links route through Travelpayouts (`tp.media` redirect carrying our marker → attribution cookie → any purchase credits us), no user account needed. Multi-vendor picker for eSIM / insurance / flights; catalogue in `affiliates.ts`.
 
 ---
 
 ## 7. Monetization Strategy
 
-The product must remain free for the end-user to eliminate friction and encourage rapid adoption within student cohorts.
+Free for users to eliminate friction; revenue without a growth-killing paywall.
 
-1.  **Affiliate Commission (Primary):** Lead with affiliate links (via Travelpayouts, Agoda, or direct partnerships with serviced apartments). The platform earns a commission when a user books through the provided link.
-2.  **Deferred Paid Tier:** A premium tier (e.g., a $10 "Deep Dive" custom report with hand-verified options) will only be introduced after significant traction is achieved. Introducing a paywall too early would stall user acquisition.
+1.  **Affiliate commission (live, primary early).** Travelpayouts/Agoda booking + travel-services links keep the product free and earn on bookings.
+2.  **B2B2C (the real engine).** License SiftPlace to university international offices, exchange/internship programmes and student co-living operators — institutions with a duty of care and a budget to reduce housing friction. Students use it free; institutions pay.
+3.  **Qualified lead-gen.** Each sign-up is a high-intent mover with stated preferences and dates — valuable to student-housing and co-living providers.
+4.  **Deferred paid tier.** A premium "deep-dive" custom report only after significant traction.
 
 ---
 
 ## 8. Limitations, Risks & Mitigations
 
-| Risk | Description | Mitigation Strategy |
+| Risk | Description | Mitigation |
 | :--- | :--- | :--- |
-| **Distribution** | "Simple to use" is a product attribute, not a go-to-market strategy. Acquiring the first users is the biggest hurdle. | Partner directly with university International Offices and embed actively in specific Facebook groups and Reddit communities. |
-| **Data Access** | Airbnb blocks scraping, and RentHub does not have a public API. | Focus on serviced apartments and RentHub via careful aggregation. Build direct relationships with 5-10 key student-friendly buildings to guarantee initial inventory. |
-| **API Costs** | Google Places API scales poorly with user volume. | Strictly use OpenStreetMap for proximity data. Precompute data for key Bangkok neighborhoods and cache aggressively. |
-| **Thin Moat** | A weighted calculator is easily copied by competitors. | Defensibility will come from accumulated, proprietary street-level data (the NLP vibe tags) and real user-preference data over time. |
+| **Distribution** | Acquiring the first users is the biggest hurdle; "simple to use" is not a GTM strategy. | Partner with university international offices; embed in specific Facebook/Reddit communities; renewing cohort + referrals. |
+| **Inventory / data access** | Airbnb blocks scraping; monthly/agent stock has no clean API. | Affiliate APIs for hotels; **Horganize partnership** for agent-managed condos; direct deals with student-friendly buildings; browser-extension form reads the page the user opened. |
+| **Single-use / low retention** | Users choose housing infrequently. | Win via renewing annual student cohort, referrals and the B2B2C model — not repeat consumer use. |
+| **API costs** | Paid geo APIs scale poorly with volume. | Strictly OpenStreetMap for proximity; cache aggressively; precompute key neighbourhoods; founder usage/budget dashboard. |
+| **Thin moat** | A weighted calculator is easy to copy. | Defensibility from accumulated proprietary data — community reviews, street-vibe labels, real user-preference data — plus curation/judgement for one persona in one city. |
 
 ---
 
 ## 9. Execution Phases & Roadmap
 
-### Phase 0: Validate Demand
-*   **Goal:** Prove that students want this service and will fill out the intake form.
-*   **Action:** Launch a simple landing page with a weight-intake form. Drive 10–20 Bangkok exchange students to it.
-*   **The "Human Algorithm":** The founder manually acts as the matching engine. Look up places on RentHub/Google Maps based on the user's criteria, check for external accessibility and room conditions, and email them a curated "Top 3" list.
-*   **Success Metric:** Number of completed forms and qualitative positive feedback on the recommendations.
-
-### Phase 1: MVP Engine Build (Current Phase)
-*   **Goal:** Automate the Phase 0 process.
-*   **Action:** Build the city-agnostic weighted-scoring engine. Integrate OSM for the commute-cost calculator and nearby-gym/7-Eleven search. Precompute proximity for key university areas (e.g., Samyan, Phaya Thai, Salaya).
-
-### Phase 2: Polish & Grow
-*   **Goal:** Establish a repeatable distribution loop.
-*   **Action:** Refine the UI to include the interactive map verification feature. Wire up affiliate links to begin monetization. Expand coverage to all major Bangkok neighborhoods.
-
-### Phase 3: ML & CV Refinement
-*   **Goal:** Build the technical moat.
-*   **Action:** Once enough real user interaction data is logged, train a model to personalize weighting. Introduce the Computer Vision feature to detect study desks and room conditions from photos.
-
-### Phase 4: Geographic Expansion
-*   **Goal:** Scale the business.
-*   **Action:** Point the engine at the next sprawling, complex city (e.g., Chiang Mai, Tokyo, Ho Chi Minh City) using the established pipeline.
+*   **Phase 0 — Validate demand (done).** Live landing page + weighted intake form; founder hand-matched the first cohort as a manual "concierge" to test trust and generate the first preference data.
+*   **Phase 1 — Engine (built).** City-agnostic weighted-scoring engine; OSM commute-cost + nearby search; flood/seasonality; NLP; React PWA on Vercel.
+*   **Phase 2 — Partners & monetization (in progress).** Real priced inventory via affiliates (**live**); Horganize agent-inventory partnership (in discussion); community reviews/scam reporting; lease filter; cost-of-living; crash reporting; first institutional pilot conversations.
+*   **Phase 3 — Creative AI (competition, ~1 month).** "Sift" mascot on Agnes AI; semantic embedding search on GMI Cloud; 3×2 grid; roommate-match experiment.
+*   **Phase 4 — Expansion.** Point the pipeline at the next sprawling city (e.g. other ASEAN metros), and ship Form B (the browser extension).
 
 ---
 
 ## 10. Team & Roles
 
-*   **Founder:** Year-2 Computer Science student. Focuses on the core matching algorithm, user acquisition (Phase 0 manual matching), and overall product vision.
-*   **Co-founder:** Brings experience building similar systems. Focuses on data aggregation (RentHub/OSM integration), backend architecture, and future ML/CV implementation.
+*   **Founder** — Year-2 Computer Science student, ML interest; in-market in Bangkok. Owns the matching algorithm, product vision, user acquisition (Phase 0 concierge) and the NLP/ML build.
+*   **Co-founder** — experience building similar systems; owns data aggregation, backend architecture, and future ML/CV work.
