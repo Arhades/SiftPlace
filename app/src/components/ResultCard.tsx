@@ -253,7 +253,7 @@ export function ResultCard({
       )}
 
       {/* multi-provider price comparison (affiliate Book buttons) */}
-      <PriceCompare offers={r.offers ?? []} currency={currency} />
+      <PriceCompare offers={r.offers} listing={r} currency={currency} />
 
       {/* tags */}
       <div className="mt-3 flex flex-wrap gap-1.5">
